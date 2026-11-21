@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.LyzLarm" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/base</item>
+        <item name="android:statusBarColor">@color/base</item>
+        <item name="android:navigationBarColor">@color/base</item>
+    </style>
+    <color name="base">#1B2F33</color>
+    <color name="accent">#ED4C67</color>
+</resources>
