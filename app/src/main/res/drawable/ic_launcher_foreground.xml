@@ -1,27 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Simple alarm-clock mark in the accent color on the base color. -->
+<!-- Logo C "Moon holds the sun", drawn in a 120x120 box and scaled into the adaptive
+     icon's safe zone (centre 66% of the 108dp canvas). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#ED4C67"
-        android:strokeWidth="5"
-        android:strokeLineCap="round"
-        android:pathData="M54,58m-20,0a20,20 0,1 1,40 0a20,20 0,1 1,-40 0" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#EEF3F3"
-        android:strokeWidth="5"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M54,47L54,58L61,64" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#ED4C67"
-        android:strokeWidth="5"
-        android:strokeLineCap="round"
-        android:pathData="M37,33L30,40M71,33L78,40" />
+    <group
+        android:scaleX="0.74"
+        android:scaleY="0.74"
+        android:translateX="10.34"
+        android:translateY="9.97">
+        <path
+            android:fillColor="#EEF3F3"
+            android:pathData="M57.354,28.027 A34,34 0 0,0 29.162,82.874 A34,34 0 0,0 89.261,69.050 A26,26 0 0,1 53.477,63.962 A26,26 0 0,1 57.354,28.027 Z" />
+        <path
+            android:fillColor="#ED4C67"
+            android:pathData="M74,48m-11,0a11,11 0,1 1,22 0a11,11 0,1 1,-22 0" />
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#ED4C67"
+            android:strokeWidth="4"
+            android:strokeLineCap="round"
+            android:pathData="M74,28L74,23M91,48L96,48M86,36L90,32M86,60L90,64" />
+    </group>
 </vector>

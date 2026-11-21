@@ -44,7 +44,7 @@ const milestones = [
 const issues = [
   ["Reliable alarm", "v0.1", "done", "Alarms list and editor, `setAlarmClock`, full-screen ringing screen, vibration first then fade-in, fixed snooze. Survives restart, time / time-zone change and app updates. Setup with test alarm and System check."],
   ["Build and release pipeline", "v0.1", "done", "Every push builds a debug APK; tag `v*` builds a signed release APK and creates a GitHub Release. Website at lyzio.github.io/LyzLarm built from releases and roadmap issues."],
-  ["Sleep tracking service", "v0.2", "planned", "Foreground service with accelerometer batching, phone on the mattress, 30-second epochs saved, basic morning graph with tracking gaps shown."],
+  ["Sleep tracking service", "v0.2", "done", "Foreground service with accelerometer batching, phone on the mattress, 30-second epochs saved, basic morning graph with tracking gaps shown."],
   ["Smart wake window", "v0.3", "planned", "Sleep engine v1: rings at light sleep inside the wake window, fallback at the window end, wake reason shown. Sensitivity setting and smart snooze."],
   ["Sound tracking in the last hours", "v0.4", "planned", "Microphone in the last 1–2 hours, analyzed live and never recorded; sound features in the wake decision; mic period in the graph. Shared bed setting."],
   ["Learning, history and backups", "v0.5", "planned", "Morning rating, personal baseline, cycle-length estimate, trends, export/import (JSON/CSV), weekly backup to a chosen folder, optional pruning."],

@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import se.lyzio.lyzlarm.BuildConfig
 import se.lyzio.lyzlarm.R
-import se.lyzio.lyzlarm.ui.components.IconBadge
+import se.lyzio.lyzlarm.ui.components.LogoBadge
 import se.lyzio.lyzlarm.ui.components.LzIcon
 import se.lyzio.lyzlarm.ui.setup.startSafely
 import se.lyzio.lyzlarm.ui.theme.Lz
@@ -70,7 +70,7 @@ fun AboutScreen(onBack: () -> Unit, onOpenLicenses: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                IconBadge(R.drawable.ic_alarm, background = Lz.Accent, tint = Lz.OnAccent)
+                LogoBadge()
                 Text("LyzLarm", fontFamily = SpaceGrotesk, fontWeight = FontWeight.SemiBold, fontSize = 28.sp, color = Lz.Text)
                 Text("Version ${BuildConfig.VERSION_NAME}", color = Lz.TextMuted, fontSize = 14.sp)
             }

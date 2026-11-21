@@ -201,7 +201,7 @@ fun EditAlarmScreen(alarmId: Long, onDone: () -> Unit) {
                     selectedColor = Lz.Sound,
                     enabled = false,
                 )
-                Text("Sleep tracking arrives in v0.2, sound in v0.4.", color = Lz.TextMuted, fontSize = 12.sp)
+                Text("Sound tracking arrives in v0.4.", color = Lz.TextMuted, fontSize = 12.sp)
             }
 
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Lz.Surface)) {

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed-icon layer: moon and sun in one color, separated by the cut-out gap. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.74"
+        android:scaleY="0.74"
+        android:translateX="10.34"
+        android:translateY="9.97">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M57.354,28.027 A34,34 0 0,0 29.162,82.874 A34,34 0 0,0 89.261,69.050 A26,26 0 0,1 53.477,63.962 A26,26 0 0,1 57.354,28.027 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M74,48m-11,0a11,11 0,1 1,22 0a11,11 0,1 1,-22 0" />
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="4"
+            android:strokeLineCap="round"
+            android:pathData="M74,28L74,23M91,48L96,48M86,36L90,32M86,60L90,64" />
+    </group>
+</vector>

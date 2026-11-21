@@ -1,8 +1,6 @@
 package se.lyzio.lyzlarm.ui.home
 
 import androidx.annotation.DrawableRes
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -31,19 +29,28 @@ import se.lyzio.lyzlarm.R
 import se.lyzio.lyzlarm.ui.alarms.AlarmsScreen
 import se.lyzio.lyzlarm.ui.components.LzIcon
 import se.lyzio.lyzlarm.ui.settings.SettingsScreen
+import se.lyzio.lyzlarm.ui.sleep.NightsScreen
 import se.lyzio.lyzlarm.ui.theme.Lz
-import se.lyzio.lyzlarm.ui.theme.SpaceGrotesk
 
-/** The three main tabs: Alarms, Sleep (arrives in v0.2), Settings. */
+/** The three main tabs: Alarms, Sleep (past nights), Settings. */
 @Composable
-fun HomeScreen(onEditAlarm: (Long) -> Unit, onOpenAbout: () -> Unit, onRunTest: () -> Unit) {
-    var tab by rememberSaveable { mutableIntStateOf(0) }
+fun HomeScreen(
+    onEditAlarm: (Long) -> Unit,
+    onOpenAbout: () -> Unit,
+    onRunTest: () -> Unit,
+    onStartSleep: () -> Unit,
+    onOpenBedtime: () -> Unit,
+    onOpenNight: (Long) -> Unit,
+    onOpenTracking: () -> Unit,
+    initialTab: Int = 0,
+) {
+    var tab by rememberSaveable { mutableIntStateOf(initialTab) }
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
         Column(Modifier.weight(1f)) {
             when (tab) {
-                0 -> AlarmsScreen(onEditAlarm)
-                1 -> SleepPlaceholder()
-                else -> SettingsScreen(onOpenAbout = onOpenAbout, onRunTest = onRunTest)
+                0 -> AlarmsScreen(onEditAlarm, onStartSleep, onOpenBedtime, onOpenNight)
+                1 -> NightsScreen(onOpenNight)
+                else -> SettingsScreen(onOpenAbout = onOpenAbout, onRunTest = onRunTest, onOpenTracking = onOpenTracking)
             }
         }
         HorizontalDivider(color = Lz.Divider)
@@ -72,33 +79,5 @@ private fun NavItem(label: String, @DrawableRes icon: Int, selected: Boolean, on
     ) {
         LzIcon(icon, null, tint = color)
         Text(label, color = color, fontSize = 12.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium)
-    }
-}
-
-@Composable
-private fun SleepPlaceholder() {
-    Column(
-        Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 28.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Text("Sleep", fontFamily = SpaceGrotesk, fontWeight = FontWeight.SemiBold, fontSize = 30.sp, color = Lz.Text)
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .background(Lz.Surface, androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
-                .border(1.dp, Lz.Outline, androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            LzIcon(R.drawable.ic_moon, null, tint = Lz.AccentSoft, size = 28.dp)
-            Text("Sleep tracking arrives in v0.2", color = Lz.Text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-            Text(
-                "Put the phone on the mattress and LyzLarm will show how you slept every morning. " +
-                    "Until then, your alarms ring at the exact time you set.",
-                color = Lz.TextMuted,
-                fontSize = 14.sp,
-                lineHeight = 20.sp,
-            )
-        }
     }
 }
