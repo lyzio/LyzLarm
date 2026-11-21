@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simple alarm-clock mark in the accent color on the base color. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#ED4C67"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:pathData="M54,58m-20,0a20,20 0,1 1,40 0a20,20 0,1 1,-40 0" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#EEF3F3"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M54,47L54,58L61,64" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#ED4C67"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:pathData="M37,33L30,40M71,33L78,40" />
+</vector>

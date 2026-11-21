@@ -1,0 +1,23 @@
+name: Feature
+description: Suggest a feature or improvement
+labels: ["feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea! LyzLarm stays fully offline in v1, so features that need the internet won't fit.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like to do?
+      description: Describe the situation or problem, not only the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How could LyzLarm help?
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?

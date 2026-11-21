@@ -1,0 +1,68 @@
+name: Build
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write # to commit the exported database schema back to the branch
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build debug APK and run unit tests
+        run: |
+          set -o pipefail
+          ./gradlew assembleDebug testDebugUnitTest :sleep-engine:test --stacktrace 2>&1 | tee build.log
+
+      - name: Report build errors
+        if: failure()
+        run: |
+          # Kotlin compiler errors and Gradle failure summaries become annotations on the run.
+          grep -E '^e: ' build.log | head -40 | while IFS= read -r line; do echo "::error::${line}"; done || true
+          awk '/What went wrong:/{f=1;n=0} f{print; n++} n>12{f=0}' build.log | head -60 | tr '\n' ' ' | sed 's/^/::error::/' || true
+          grep -E 'FAILED|AssertionError|expected:<' build.log | head -20 | while IFS= read -r line; do echo "::error::${line}"; done || true
+
+      - name: Check the APK has no INTERNET permission
+        run: |
+          AAPT2=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          APK=$(ls app/build/outputs/apk/debug/*.apk | head -1)
+          "$AAPT2" dump permissions "$APK" | tee permissions.txt
+          if grep -q 'android.permission.INTERNET' permissions.txt; then
+            echo "::error::The APK requests INTERNET permission. LyzLarm must stay offline."
+            exit 1
+          fi
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: lyzlarm-debug-${{ github.sha }}
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 30
+
+      - name: Commit exported database schema
+        if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/')
+        run: |
+          if [ -n "$(git status --porcelain app/schemas)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add app/schemas
+            git commit -m "Update exported Room schema"
+            git push
+          fi

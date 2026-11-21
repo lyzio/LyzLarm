@@ -1,0 +1,26 @@
+name: Seed GitHub
+
+# One-time (re-runnable): creates labels, milestones v0.1–v0.6 and the first roadmap issues.
+on:
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  actions: write
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Create labels, milestones and roadmap issues
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node .github/scripts/seed-github.mjs
+      - name: Rebuild the website with the new roadmap
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run site.yml --ref master || echo "Website not rebuilt (is GitHub Pages enabled?)"
