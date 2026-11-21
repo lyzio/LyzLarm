@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
@@ -60,6 +61,7 @@ fun ChoiceDialog(title: String, options: List<String>, selected: Int, onSelect: 
 }
 
 /** Time of day picker; [initialMinute] and the result are minutes after midnight. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimeDialog(title: String, initialMinute: Int, onConfirm: (Int) -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
