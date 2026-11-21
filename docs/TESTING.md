@@ -4,10 +4,12 @@ Install the debug APK from the pull request's latest **Build** run (Actions › 
 Artifacts › `lyzlarm-debug-…`, unzip, open the `.apk` on the phone). It installs as a
 separate app next to any release build. Tick each box; note anything odd in the PR.
 
-Updating from the v0.1 debug build: install over it. Your alarms must still be there.
+Coming from the v0.1 debug build: **uninstall it first** (it was signed with a one-off
+test key, so Android refuses the update) and set your alarms again. From v0.2 on, test
+builds share one fixed test key, so later builds install over earlier ones.
 
 ## Upgrade and logo
-- [ ] Installed over v0.1: all alarms are still there with the same times, days and sounds
+- [ ] Installing a later v0.2 build over an earlier one works and keeps alarms and nights
 - [ ] The launcher icon is the new logo (crescent moon holding a pink sun) on a dark background
 - [ ] With themed icons on (Wallpaper & style › Themed icons), the icon shows moon and sun in one color
 - [ ] Notifications show the moon-and-sun small icon; Welcome (reset app data to see it) and About show the new logo

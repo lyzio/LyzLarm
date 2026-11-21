@@ -22,6 +22,14 @@ android {
     }
 
     signingConfigs {
+        // Test builds: one fixed, public key (app/debug.keystore) instead of a new random
+        // key per CI run, so a newer debug APK installs over an older one. It never signs releases.
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         if (releaseKeystore != null) {
             create("release") {
                 storeFile = file(releaseKeystore)
