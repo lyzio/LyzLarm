@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LyzLarm · offline smart alarm for Android</title>
+<meta name="description" content="LyzLarm is a free, open-source smart alarm for Android that tracks your sleep on the phone and never touches the internet.">
+<meta name="theme-color" content="#1B2F33">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%231B2F33'/%3E%3Ccircle cx='12' cy='13' r='6.5' fill='none' stroke='%23ED4C67' stroke-width='2'/%3E%3Cpath d='M12 10v3l2 1.5' fill='none' stroke='%23EEF3F3' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+@font-face{font-family:Inter;font-weight:400;font-display:swap;src:url(fonts/inter-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:Inter;font-weight:500;font-display:swap;src:url(fonts/inter-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:Inter;font-weight:600;font-display:swap;src:url(fonts/inter-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Space Grotesk";font-weight:500;font-display:swap;src:url(fonts/space-grotesk-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"Space Grotesk";font-weight:600;font-display:swap;src:url(fonts/space-grotesk-latin-600-normal.woff2) format("woff2")}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:#1B2F33;color:#EEF3F3;font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#F07A8E}a:hover{color:#F59BAA}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+.display{font-family:"Space Grotesk",sans-serif;font-weight:600}
+header{border-bottom:1px solid #2C474D}
+.head{min-height:64px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;color:#EEF3F3;text-decoration:none;font-family:"Space Grotesk",sans-serif;font-size:20px;font-weight:600}
+nav{display:flex;flex-wrap:wrap;gap:4px 20px;font-size:14px}
+nav a{color:#D3DEE0;text-decoration:none;min-height:44px;display:flex;align-items:center}
+nav a:hover{color:#FFFFFF}
+section{padding:24px 0 56px}
+.hero{padding:72px 0 56px;display:flex;flex-wrap:wrap;align-items:center;gap:48px}
+.hero-text{flex:999 1 460px;min-width:0;display:flex;flex-direction:column;gap:20px}
+.pill{align-self:flex-start;font-size:13px;font-weight:600;color:#FFFFFF;background:#006266;border-radius:14px;padding:6px 12px}
+h1{margin:0;font-family:"Space Grotesk",sans-serif;font-size:clamp(38px,6vw,56px);line-height:1.05;font-weight:600;letter-spacing:-1px}
+.lead{margin:0;font-size:19px;line-height:1.55;color:#D3DEE0;max-width:560px}
+.buttons{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px}
+.btn{min-height:52px;padding:0 24px;border-radius:26px;text-decoration:none;font-weight:600;font-size:16px;display:flex;align-items:center;justify-content:center}
+.btn-primary{background:#ED4C67;color:#0F1A1C}.btn-primary:hover{background:#F07A8E;color:#0F1A1C}
+.btn-ghost{border:1px solid #33525A;color:#EEF3F3;font-weight:500}.btn-ghost:hover{border-color:#A9BCC0;color:#FFFFFF}
+.btn-block{min-height:56px;border-radius:28px;width:100%}
+.phone-wrap{flex:1 1 260px;display:flex;justify-content:center}
+.phone{width:254px;border-radius:36px;background:#0F1A1C;padding:10px}
+.screen{border-radius:28px;background:#1B2F33;padding:20px 14px 14px;display:flex;flex-direction:column;gap:12px;min-height:506px}
+.screen-title{display:flex;justify-content:space-between;align-items:center}
+.screen-title b{font-family:"Space Grotesk",sans-serif;font-size:20px;font-weight:600}
+.screen-plus{width:28px;height:28px;border-radius:14px;border:1px solid #33525A;background:#243D42;display:flex;align-items:center;justify-content:center}
+.next{background:#006266;border-radius:14px;padding:13px;display:flex;flex-direction:column;gap:3px}
+.next small{font-size:9px;color:#D6EDEC;font-weight:500}
+.next strong{font-family:"Space Grotesk",sans-serif;font-size:28px;font-weight:600;color:#FFFFFF;letter-spacing:-.5px}
+.next span{font-size:9px;color:#E6F4F3}
+.mini{background:#243D42;border-radius:11px;padding:11px 10px 11px 12px;display:flex;align-items:center;justify-content:space-between}
+.mini.off{background:#20363A}
+.mini b{display:block;font-family:"Space Grotesk",sans-serif;font-size:17px;font-weight:600}
+.mini.off b{color:#A9BCC0}
+.mini i{font-style:normal;font-size:9px;color:#A9BCC0}
+.tog{width:32px;height:19px;border-radius:10px;background:#ED4C67;display:flex;justify-content:flex-end;padding:2px}
+.tog::after{content:"";width:15px;height:15px;border-radius:8px;background:#FFFFFF}
+.off .tog{background:#33525A;justify-content:flex-start}.off .tog::after{background:#9DB1B5}
+.tabs{margin-top:auto;display:flex;justify-content:space-around;border-top:1px solid #2C474D;padding-top:8px;font-size:9px;color:#A9BCC0}
+.tabs span:first-child{color:#F07A8E;font-weight:600}
+.panel{background:#243D42;border-radius:24px;padding:32px;display:flex;flex-wrap:wrap;gap:32px;align-items:flex-start}
+.panel-main{flex:999 1 420px;min-width:0;display:flex;flex-direction:column;gap:12px}
+.panel-side{flex:1 1 240px;display:flex;flex-direction:column;gap:10px}
+.eyebrow{font-size:13px;font-weight:600;color:#A9BCC0;text-transform:uppercase;letter-spacing:1px}
+.h2s{margin:0;font-family:"Space Grotesk",sans-serif;font-size:32px;font-weight:600}
+.muted-date{font-size:16px;font-weight:500;color:#A9BCC0}
+.bullets{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:15px;line-height:1.5;color:#D3DEE0}
+.link-row{font-size:14px;min-height:44px;display:flex;align-items:center}
+.soft{margin:0;color:#D3DEE0;font-size:15px;line-height:1.5}
+.small{font-size:13px}.muted{color:#A9BCC0}.center{text-align:center}
+h2{margin:0;font-family:"Space Grotesk",sans-serif;font-size:36px;font-weight:600}
+.stack{display:flex;flex-direction:column;gap:24px}
+.grid{display:flex;flex-wrap:wrap;gap:16px}
+.card{background:#243D42;border-radius:18px;padding:22px}
+.feature{flex:1 1 300px;display:flex;flex-direction:column;gap:8px}
+.feature-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.feature h3{margin:0;font-size:17px;font-weight:600}
+.feature p{margin:0;font-size:14px;line-height:1.5;color:#D3DEE0}
+.badge{font-size:12px;font-weight:600;border-radius:10px;padding:3px 10px;white-space:nowrap}
+.badge-on{color:#FFFFFF;background:#006266}.badge-soon{color:#0F1A1C;background:#F59BAA}
+.road-top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px}
+.road-col{flex:1 1 300px;display:flex;flex-direction:column;gap:10px}
+.road-head{margin:0 0 4px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+.road-head-planned{color:#A9BCC0}.road-head-progress{color:#F07A8E}.road-head-done{color:#4FB3A9}
+.dot-open{width:10px;height:10px;border-radius:5px;border:2px solid #A9BCC0}
+.dot-fill{width:10px;height:10px;border-radius:5px;background:#ED4C67}
+.road-item{background:#243D42;border-radius:14px;padding:14px 16px;text-decoration:none;color:#EEF3F3;display:flex;flex-direction:column;gap:6px;border:1px solid transparent}
+.road-item:hover{color:#FFFFFF;border-color:#33525A}
+.road-active{border-color:#ED4C67}
+.road-title{font-size:15px;font-weight:500}
+.road-meta{font-size:12px;color:#A9BCC0}
+.road-empty{margin:0;font-size:14px;color:#A9BCC0}
+.privacy{background:#006266;border-radius:24px;padding:32px;display:flex;flex-direction:column;gap:20px}
+.privacy h2{color:#FFFFFF}
+.privacy-item{flex:1 1 260px;display:flex;flex-direction:column;gap:6px}
+.privacy-item h3{margin:0;font-size:17px;font-weight:600;color:#FFFFFF}
+.privacy-item p{margin:0;font-size:15px;line-height:1.5;color:#E6F4F3}
+.two{display:flex;flex-wrap:wrap;gap:32px;padding-bottom:72px}
+.two > div{flex:1 1 420px;display:flex;flex-direction:column;gap:14px}
+.two h2{font-size:28px}
+.two ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:15px;line-height:1.5;color:#D3DEE0}
+footer{border-top:1px solid #2C474D}
+.foot{padding:24px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;font-size:13px;color:#A9BCC0}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap head">
+    <a class="brand" href="#top">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8" stroke="#ED4C67"/><path d="M12 9v4l2.5 2" stroke="#EEF3F3"/><path d="M5 3 2 6M19 3l3 3" stroke="#ED4C67"/></svg>LyzLarm</a>
+    <nav aria-label="Sections">
+      <a href="#release">Download</a>
+      <a href="#features">Features</a>
+      <a href="#roadmap">Roadmap</a>
+      <a href="#privacy">Privacy</a>
+      <a href="{{REPO_URL}}">GitHub</a>
+    </nav>
+  </div>
+</header>
+<main id="top">
+  <section class="wrap hero">
+    <div class="hero-text">
+      <div class="pill">Free · open source · no internet access</div>
+      <h1>Wake up at your lightest sleep.</h1>
+      <p class="lead">LyzLarm is a smart alarm for Android that tracks your sleep on the phone and rings at the right moment in your wake window. It never touches the internet: your nights stay yours.</p>
+      <div class="buttons">
+        <a class="btn btn-primary" href="{{HERO_DOWNLOAD_URL}}">{{DOWNLOAD_LABEL}}</a>
+        <a class="btn btn-ghost" href="{{REPO_URL}}">View source</a>
+      </div>
+    </div>
+    <div class="phone-wrap" aria-hidden="true">
+      <div class="phone">
+        <div class="screen">
+          <div class="screen-title"><b>Alarms</b><span class="screen-plus"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#EEF3F3" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></div>
+          <div class="next"><small>Next wake-up · in 7 h 16 min</small><strong>06:30</strong><span>Rings at exactly this time</span></div>
+          <div class="mini"><div><b>06:30</b><i>Mon – Fri · fixed time</i></div><span class="tog"></span></div>
+          <div class="mini"><div><b>08:00</b><i>Sat, Sun · fixed time</i></div><span class="tog"></span></div>
+          <div class="mini off"><div><b>05:45</b><i>Once · fixed time</i></div><span class="tog"></span></div>
+          <div class="tabs"><span>Alarms</span><span>Sleep</span><span>Settings</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="release" class="wrap">
+    <div class="panel">
+      <div class="panel-main">{{RELEASE}}
+      </div>
+      <div class="panel-side">
+          {{DOWNLOAD_BUTTON}}
+      </div>
+    </div>
+  </section>
+
+  <section id="features" class="wrap stack">
+    <h2>What it does</h2>
+    <div class="grid">{{FEATURES}}
+    </div>
+  </section>
+
+  <section id="roadmap" class="wrap stack">
+    <div class="road-top">
+      <h2>Roadmap</h2>
+      <a class="link-row" href="{{REPO_URL}}/issues?q=label%3Aroadmap">Follow on GitHub</a>
+    </div>
+    <div class="grid">{{ROADMAP}}
+    </div>
+    <p class="small muted" style="margin:0">Updated automatically from GitHub issues labeled “roadmap”. Last built {{BUILT}}.</p>
+  </section>
+
+  <section id="privacy" class="wrap">
+    <div class="privacy">
+      <h2>Private by design</h2>
+      <div class="grid" style="gap:24px">
+        <div class="privacy-item"><h3>No internet permission</h3><p>The app can't send anything anywhere. Anyone can check this in the source code.</p></div>
+        <div class="privacy-item"><h3>Nothing recorded</h3><p>Sound is analyzed live and thrown away. Only numbers are saved.</p></div>
+        <div class="privacy-item"><h3>No accounts, no ads</h3><p>Your data stays on your phone unless you export it yourself.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="install" class="wrap two">
+    <div>
+      <h2>Install</h2>
+      <ol>
+        <li>Download the APK from the <a href="{{DOWNLOAD_URL}}">latest release</a> on your phone.</li>
+        <li>Open it and allow your browser or file manager to install apps once.</li>
+        <li>Open LyzLarm and follow the setup, including the test alarm.</li>
+      </ol>
+    </div>
+    <div>
+      <h2>Source</h2>
+      <p class="soft">LyzLarm is free software under the GPL-3.0-or-later license. Code, issues and releases are on <a href="{{REPO_URL}}">github.com/lyzio/LyzLarm</a>.</p>
+    </div>
+  </section>
+</main>
+<footer>
+  <div class="wrap foot">
+    <span>LyzLarm · GPL-3.0-or-later · fonts: Inter, Space Grotesk (<a href="fonts/LICENSES.txt">OFL</a>)</span>
+    <span>This site uses no cookies and no tracking.</span>
+  </div>
+</footer>
+</body>
+</html>

@@ -58,7 +58,9 @@ const val SETUP_STEPS = 5
 fun SetupFlow(onFinished: () -> Unit) {
     var step by rememberSaveable { mutableIntStateOf(1) }
     BackHandler(enabled = step > 1) { step-- }
-    val next = { if (step < SETUP_STEPS) step++ else onFinished() }
+    val next: () -> Unit = {
+        if (step < SETUP_STEPS) step += 1 else onFinished()
+    }
     when (step) {
         1 -> WelcomeStep(next)
         2 -> NotificationsStep(next)
