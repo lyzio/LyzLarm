@@ -1,15 +1,15 @@
 name: Website
 
-# Rebuilds lyzio.github.io/LyzLarm on each release, each change to an issue
-# (the roadmap), and each change to site/ on master.
+# Rebuilds lyzio.github.io/LyzLarm only when something is merged to master or a
+# release is published (so the site shows the new version). Branches and pull
+# requests never build it; roadmap issue edits show up at the next rebuild.
+# The Release workflow creates releases with the built-in token, which does not
+# fire the `release` event, so `workflow_run` covers tagged releases.
 on:
   push:
     branches: [master]
-    paths: ["site/**", ".github/workflows/site.yml"]
   release:
-    types: [published, edited, deleted]
-  issues:
-    types: [opened, edited, closed, reopened, labeled, unlabeled, milestoned, demilestoned, deleted]
+    types: [published]
   workflow_run:
     workflows: [Release]
     types: [completed]
