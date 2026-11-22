@@ -1,5 +1,6 @@
 package se.lyzio.lyzlarm.ui.sleep
 
+import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -28,6 +29,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -386,40 +388,65 @@ private fun EventLine(e: EventRow) {
 @Composable
 private fun ExportDialog(night: Night, onDismiss: () -> Unit) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+    val app = context.app
+    val appContext = context.applicationContext
+    var preparing by remember { mutableStateOf(false) }
     val save = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         if (uri != null) {
-            context.app.scope.launch {
-                runCatching { NightExport.saveTo(context.applicationContext, night, uri) }
-                    .onSuccess { withContext(Dispatchers.Main) { Toast.makeText(context, "Night saved", Toast.LENGTH_SHORT).show() } }
-                    .onFailure { withContext(Dispatchers.Main) { Toast.makeText(context, "Could not save the file", Toast.LENGTH_SHORT).show() } }
+            app.scope.launch {
+                runCatching { NightExport.saveTo(appContext, night, uri) }
+                    .onSuccess { withContext(Dispatchers.Main) { Toast.makeText(appContext, "Night saved", Toast.LENGTH_SHORT).show() } }
+                    .onFailure { withContext(Dispatchers.Main) { Toast.makeText(appContext, "Could not save the file", Toast.LENGTH_SHORT).show() } }
             }
         }
         onDismiss()
+    }
+    fun share() {
+        preparing = true
+        // App scope: a large night (raw data) takes a few seconds and must not be
+        // cancelled if the dialog closes meanwhile.
+        app.scope.launch {
+            val intent = runCatching { NightExport.shareIntent(appContext, night) }.getOrNull()
+            withContext(Dispatchers.Main) {
+                if (intent != null) {
+                    runCatching { appContext.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                        .onFailure { Toast.makeText(appContext, "No app to share with", Toast.LENGTH_SHORT).show() }
+                } else {
+                    Toast.makeText(appContext, "Could not prepare the export", Toast.LENGTH_SHORT).show()
+                }
+                preparing = false
+                onDismiss()
+            }
+        }
     }
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Lz.Surface,
         title = { Text("Export this night", color = Lz.Text) },
         text = {
-            Text(
-                "A CSV file with the movement per 30 s and the night's events" +
-                    (if (night.endTime != null) ", plus raw sensor data if it was recorded and is still kept." else "."),
-                color = Lz.TextSoft,
-                fontSize = 14.sp,
-            )
+            if (preparing) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(Modifier.size(22.dp), color = Lz.Accent, strokeWidth = 2.5.dp)
+                    Text("Preparing export…", color = Lz.TextSoft, fontSize = 14.sp)
+                }
+            } else {
+                Text(
+                    "A CSV file with the movement per 30 s and the night's events" +
+                        (if (night.endTime != null) ", plus raw sensor data if it was recorded and is still kept." else "."),
+                    color = Lz.TextSoft,
+                    fontSize = 14.sp,
+                )
+            }
         },
         confirmButton = {
-            TextButton(onClick = {
-                scope.launch {
-                    val intent = withContext(Dispatchers.IO) { NightExport.shareIntent(context, night) }
-                    context.startActivity(intent)
-                    onDismiss()
-                }
-            }) { Text("Share…", color = Lz.AccentText, fontWeight = FontWeight.SemiBold) }
+            TextButton(onClick = ::share, enabled = !preparing) {
+                Text("Share…", color = if (preparing) Lz.TextDim else Lz.AccentText, fontWeight = FontWeight.SemiBold)
+            }
         },
         dismissButton = {
-            TextButton(onClick = { save.launch(NightCsv.fileName(night)) }) { Text("Save to file…", color = Lz.TextSoft) }
+            TextButton(onClick = { save.launch(NightCsv.fileName(night)) }, enabled = !preparing) {
+                Text("Save to file…", color = if (preparing) Lz.TextDim else Lz.TextSoft)
+            }
         },
     )
 }
