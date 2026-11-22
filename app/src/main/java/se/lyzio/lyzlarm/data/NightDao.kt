@@ -41,6 +41,10 @@ interface NightDao {
     @Query("SELECT start_time FROM nights WHERE start_time >= :since ORDER BY start_time DESC")
     suspend fun startTimesSince(since: Long): List<Long>
 
+    /** Finished nights shorter than [minMs]: discarded (see Tracker.MIN_NIGHT_MS). */
+    @Query("SELECT id FROM nights WHERE end_time IS NOT NULL AND end_time - start_time < :minMs")
+    suspend fun shortNightIds(minMs: Long): List<Long>
+
     // Epochs
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

@@ -30,7 +30,10 @@ class LyzLarmApp : Application() {
         super.onCreate()
         Notifications.createChannels(this)
         scope.launch {
-            database.nightDao().deleteRawBefore(System.currentTimeMillis() - Tracker.RAW_KEEP_MS)
+            val nights = database.nightDao()
+            nights.deleteRawBefore(System.currentTimeMillis() - Tracker.RAW_KEEP_MS)
+            // Short sessions saved before the 15-minute rule existed.
+            nights.shortNightIds(Tracker.MIN_NIGHT_MS).forEach { nights.deleteNight(it) }
         }
         // Re-plan the bedtime reminder and battery warning whenever alarms, settings or
         // the open night change.

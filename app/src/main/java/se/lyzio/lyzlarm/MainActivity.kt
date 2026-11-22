@@ -151,7 +151,15 @@ private fun MainNav(pendingAction: MutableStateFlow<String?>) {
         composable("bedtime") {
             BedtimeScreen(
                 onFinished = { id ->
-                    nav.navigate("morning/$id") { popUpTo("home") { inclusive = false } }
+                    scope.launch {
+                        if (context.app.database.nightDao().night(id) != null) {
+                            nav.navigate("morning/$id") { popUpTo("home") { inclusive = false } }
+                        } else {
+                            // Stopped within 15 minutes: not kept as a night.
+                            nav.popBackStack("home", inclusive = false)
+                            Toast.makeText(context, "Under 15 minutes, so not saved as a night", Toast.LENGTH_LONG).show()
+                        }
+                    }
                 },
                 onBack = { nav.popBackStack() },
             )

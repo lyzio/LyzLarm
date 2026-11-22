@@ -21,13 +21,13 @@ builds share one fixed test key, so later builds install over earlier ones.
 - [ ] A low "Tracking your sleep · Alarm HH:MM · movement tracking on" notification appears with **Stop tracking**
 - [ ] Bedtime screen: time, alarm, Movement "Active, all night", Alarm "Rings in …", Battery "…%, enough for tonight" (or a warning), greyed Smart wake and Sound rows
 - [ ] After 30 s without touching, the screen dims; a tap brightens it
-- [ ] A short press on **Hold to stop tracking** does nothing; holding ~1.5 s stops tracking and opens the night's graph
+- [ ] A short press on **Hold to stop tracking** does nothing; holding ~1.5 s stops tracking. Under 15 min tracked: a message says it was not saved; longer: the night's graph opens
 - [ ] Back from Bedtime returns to the Alarms tab while tracking continues; the big button then reads "Tracking your sleep" and reopens Bedtime
 
 ## Short test night (30–60 min, set an alarm 45 min ahead)
 - [ ] Start sleep, put the phone face down on the bed, move it now and then, lock the screen
 - [ ] When the alarm rings, **Snooze** once, then **I'm up**: after unlocking, the Morning screen opens ("Saving last night…" for a moment is OK)
-- [ ] Morning: date range, tiles Tracked / Started / Woke; the graph shows bars where you moved, an accent line and dot at the alarm, time labels every 2 h
+- [ ] Morning: date range, tiles Tracked / Started / Woke (full text, not cut off), legend on one or two lines, "Battery X% → Y% (Z% used)"; the graph shows bars where you moved, an accent line and dot at the alarm, time labels every 2 h
 - [ ] Event list (newest first): Alarm dismissed, Snoozed 9 min, Alarm rang, Tracking started · battery …%
 - [ ] "How did you wake up?" is greyed with "Arrives in v0.5"
 - [ ] The Alarms tab shows a "Last night" card (tracked time, start – end, gaps) that opens Morning

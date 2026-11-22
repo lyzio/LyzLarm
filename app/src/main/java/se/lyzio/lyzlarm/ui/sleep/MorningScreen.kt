@@ -5,10 +5,14 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -145,6 +149,7 @@ private fun Message(text: String) {
     Text(text, color = Lz.TextMuted, fontSize = 15.sp, modifier = Modifier.padding(top = 24.dp))
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun NightContent(night: Night, data: NightData, events: List<EventRow>) {
     val context = LocalContext.current
@@ -182,13 +187,22 @@ private fun NightContent(night: Night, data: NightData, events: List<EventRow>) 
                 gaps = data.summary.gaps,
                 alarmAt = alarmAt,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Legend { Box(Modifier.size(10.dp).clip(RoundedCornerShape(2.dp)).background(BarColor)) }
-                Text("Movement (5 min)", color = Lz.TextMuted, fontSize = 12.sp)
-                Legend { HatchSwatch() }
-                Text("Not tracked", color = Lz.TextMuted, fontSize = 12.sp)
-                Legend { Box(Modifier.size(8.dp).clip(CircleShape).background(Lz.Accent)) }
-                Text("Alarm", color = Lz.TextMuted, fontSize = 12.sp)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                LegendItem("Movement (5 min)") { Box(Modifier.size(10.dp).clip(RoundedCornerShape(2.dp)).background(BarColor)) }
+                LegendItem("Not tracked") { HatchSwatch() }
+                LegendItem("Alarm") { Box(Modifier.size(8.dp).clip(CircleShape).background(Lz.Accent)) }
+            }
+            val bStart = night.batteryStart
+            val bEnd = night.batteryEnd
+            if (bStart != null && bEnd != null) {
+                Text(
+                    "Battery $bStart% → $bEnd% (${(bStart - bEnd).coerceAtLeast(0)}% used)",
+                    color = Lz.TextSoft,
+                    fontSize = 13.sp,
+                )
             }
         }
 
@@ -223,8 +237,11 @@ private fun NightContent(night: Night, data: NightData, events: List<EventRow>) 
 }
 
 @Composable
-private fun Legend(content: @Composable () -> Unit) {
-    Box(Modifier.size(12.dp), contentAlignment = Alignment.Center) { content() }
+private fun LegendItem(label: String, swatch: @Composable () -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(12.dp), contentAlignment = Alignment.Center) { swatch() }
+        Text(label, color = Lz.TextMuted, fontSize = 12.sp, maxLines = 1)
+    }
 }
 
 @Composable
@@ -256,7 +273,12 @@ private fun Tile(label: String, value: String, valueColor: Color, modifier: Modi
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(label, color = Lz.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-        Text(value, color = valueColor, fontFamily = SpaceGrotesk, fontWeight = FontWeight.SemiBold, fontSize = 18.sp, maxLines = 1)
+        BasicText(
+            value,
+            style = TextStyle(color = valueColor, fontFamily = SpaceGrotesk, fontWeight = FontWeight.SemiBold, fontSize = 18.sp),
+            maxLines = 1,
+            autoSize = TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = 18.sp),
+        )
     }
 }
 
@@ -297,11 +319,13 @@ private fun MovementGraph(start: Long, end: Long, epochs: List<EpochRow>, gaps: 
         // Bars: square-root scale so small movements stay visible next to big ones.
         val max = bars.maxOfOrNull { it.movement }?.takeIf { it > 0f } ?: 1f
         val barW = (Bars.BAR_MS / span * plotW).coerceAtLeast(1f)
-        for (b in bars) {
-            val h = sqrt(b.movement / max) * plotH
-            if (h <= 0f) continue
-            val l = x(b.startMs)
-            drawRect(BarColor, Offset(l + barW * 0.1f, top + plotH - h), Size(barW * 0.8f, h))
+        clipRect(axisW, top, size.width, top + plotH) {
+            for (b in bars) {
+                val h = sqrt(b.movement / max) * plotH
+                if (h <= 0f) continue
+                val l = axisW + (b.startMs - start) / span * plotW
+                drawRect(BarColor, Offset(l + barW * 0.1f, top + plotH - h), Size(barW * 0.8f, h))
+            }
         }
 
         // Alarm.

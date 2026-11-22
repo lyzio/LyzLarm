@@ -27,6 +27,9 @@ object Tracker {
     /** An open night older than this is closed instead of resumed (safety net). */
     const val MAX_NIGHT_MS = 18 * 3_600_000L
 
+    /** Tracking stopped sooner than this is not kept as a night (accidental or test start). */
+    const val MIN_NIGHT_MS = 15 * 60_000L
+
     /** Raw samples are deleted after this long. */
     const val RAW_KEEP_MS = 3 * 24 * 3_600_000L
 
@@ -124,6 +127,12 @@ object Tracker {
         val dao = context.app.database.nightDao()
         val current = dao.night(night.id) ?: return
         if (!current.isOpen) return
+        if (at - current.startTime < MIN_NIGHT_MS) {
+            dao.deleteNight(current.id)
+            Planner.refresh(context)
+            Log.i(TAG, "Night ${night.id} discarded: shorter than ${MIN_NIGHT_MS / 60_000} min")
+            return
+        }
         val battery = battery(context)
         dao.updateNight(
             current.copy(endTime = at, wakeTime = at, wakeReason = reason.name, batteryEnd = battery),
