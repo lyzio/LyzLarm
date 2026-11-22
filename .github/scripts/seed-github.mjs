@@ -62,6 +62,7 @@ const issues = [
   ["Wake reason on the morning screen", "v0.3", "planned", "Every wake-up records which rule fired (light sleep, already awake, window end) and shows it in the morning."],
   ["Sensitivity setting and learning mode", "v0.3", "planned", "Cautious / Balanced (default) / Eager; the first ~7 nights use cautious general thresholds."],
   ["Out-of-bed detection", "v0.3", "planned", "No movement is not always deep sleep: breathing shows as tiny movement in bed, an empty bed shows only sensor noise. Out-of-bed time counts as awake and gets its own band in the graph. Tuned on raw-data nights."],
+  ["Empty bed test", "v0.3", "planned", "Settings › System check: the phone lies where it does at night and records 10 minutes with nobody in bed. Kept as the empty-bed reference for out-of-bed detection; re-run after a mattress or placement change; exports as CSV. From v0.4 also the room's quiet sound level."],
   ["Smart snooze", "v0.3", "planned", "Snooze rings again at the next light-sleep moment, at the latest after the snooze length; tracking keeps running."],
   // v0.4 – Sound
   ["Sound tracking in the last hours", "v0.4", "planned", "Microphone in the last 1–2 hours, analyzed live; only numbers are saved, nothing is recorded."],
