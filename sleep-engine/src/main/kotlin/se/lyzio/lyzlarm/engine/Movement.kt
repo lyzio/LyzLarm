@@ -6,8 +6,11 @@ import kotlin.math.sqrt
 /** One accelerometer reading: wall-clock time in ms, acceleration in m/s². */
 data class Sample(val timeMs: Long, val x: Float, val y: Float, val z: Float)
 
-/** One finished 30 s epoch: aligned start time, movement score, samples it was computed from. */
-data class Epoch(val startMs: Long, val movement: Float, val sampleCount: Int)
+/**
+ * One finished 30 s epoch: aligned start time, movement score, samples it was computed from,
+ * and [noise], the spread of the acceleration length (used for out-of-bed detection).
+ */
+data class Epoch(val startMs: Long, val movement: Float, val sampleCount: Int, val noise: Float = 0f)
 
 /**
  * Movement score for one epoch.
@@ -44,6 +47,28 @@ object MovementScore {
         }
         if (pairs == 0) return 0f
         return (sum / pairs * SCALE).toFloat()
+    }
+
+    /**
+     * Standard deviation of the acceleration vector's length over the epoch, in m/s².
+     * When the phone lies still this is the sensor noise plus any tiny shaking of the
+     * mattress; an empty bed should be the quietest it gets (see [OutOfBed]).
+     */
+    fun noise(samples: List<Sample>): Float {
+        if (samples.size < 2) return 0f
+        var sum = 0.0
+        var sumSq = 0.0
+        for (s in samples) {
+            val x = s.x.toDouble()
+            val y = s.y.toDouble()
+            val z = s.z.toDouble()
+            val m = sqrt(x * x + y * y + z * z)
+            sum += m
+            sumSq += m * m
+        }
+        val n = samples.size
+        val mean = sum / n
+        return sqrt((sumSq / n - mean * mean).coerceAtLeast(0.0)).toFloat()
     }
 }
 
@@ -84,7 +109,7 @@ class EpochAccumulator(private val epochMs: Long = SleepEngine.EPOCH_MS) {
 
     private fun finishWindow(): Epoch? {
         if (current.isEmpty()) return null
-        val epoch = Epoch(windowStart, MovementScore.score(current, previous), current.size)
+        val epoch = Epoch(windowStart, MovementScore.score(current, previous), current.size, MovementScore.noise(current))
         previous = current.last()
         current.clear()
         return epoch
