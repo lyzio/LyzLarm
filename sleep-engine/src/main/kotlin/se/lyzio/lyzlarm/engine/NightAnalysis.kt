@@ -17,7 +17,10 @@ data class NightResult(
     /** Start to end, minus out-of-bed time. */
     val inBedMs: Long,
     val outOfBed: List<Period>,
-    /** False if an empty bed reference exists but tonight could not be told apart from it. */
+    /**
+     * False if an empty bed reference exists but tonight could not be told apart from it.
+     * Nights without noise data (recorded before v0.3) count as true: there is nothing to report.
+     */
     val outOfBedReliable: Boolean,
     val stages: List<StagePoint>,
 )
@@ -50,7 +53,8 @@ object NightAnalysis {
     ): NightResult {
         val sorted = points.sortedBy { it.timeMs }.filter { it.timeMs < endMs }
         val outOfBed = OutOfBed.periods(sorted, ref, endMs)
-        val reliable = ref == null || OutOfBed.reliable(sorted, ref)
+        val hasNoise = sorted.any { it.noise != null }
+        val reliable = ref == null || !hasNoise || OutOfBed.reliable(sorted, ref)
         val outMs = outOfBed.sumOf { it.lengthMs }
         val onsetIndex = onsetIndex(sorted, outOfBed)
         val onset = onsetIndex?.let { sorted[it].timeMs }

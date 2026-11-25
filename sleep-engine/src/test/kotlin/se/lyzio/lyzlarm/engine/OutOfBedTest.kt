@@ -52,6 +52,13 @@ class OutOfBedTest {
         assertEquals(night.size * E, r.inBedMs)
     }
 
+    @Test fun oldNightsWithoutNoiseAreNotFlagged() {
+        val night = Nights.join(Nights.still(60), move(), Nights.still(30))
+        val r = NightAnalysis.analyze(night, 0L, night.size * E, ref = ref)
+        assertTrue(r.outOfBedReliable)
+        assertTrue(r.outOfBed.isEmpty())
+    }
+
     @Test fun noReferenceMeansNoDetection() {
         val night = Nights.join(sleep(60), move(), empty(10), move(), sleep(30))
         assertTrue(OutOfBed.periods(night, null).isEmpty())

@@ -54,12 +54,12 @@ class NightCsvTest {
     @Test fun rowsHaveTenColumnsAndAreSorted() {
         val rows = csv().dropWhile { it.startsWith("#") }.drop(1)
         assertEquals(4, rows.size)
-        assertEquals("epoch,$start,2026-11-19T23:00:00+01:00,12.5,,,,,", rows[0])
-        assertEquals("epoch,${start + 30_000},2026-11-19T23:00:30+01:00,0,,,,,", rows[1])
-        assertEquals("event,$start,2026-11-19T23:00:00+01:00,,tracking_started,80,,,", rows[2])
+        assertEquals("epoch,$start,2026-11-19T23:00:00+01:00,12.5,,,,,,", rows[0])
+        assertEquals("epoch,${start + 30_000},2026-11-19T23:00:30+01:00,0,,,,,,0.00310", rows[1])
+        assertEquals("event,$start,2026-11-19T23:00:00+01:00,,tracking_started,80,,,,", rows[2])
         // Commas and quotes in a detail are quoted.
         assertEquals("event,${start + 60_000},2026-11-19T23:01:00+01:00,,tracking_interrupted,\"say \"\"hi\"\", ok\",,,,", rows[3])
-        rows.take(3).forEach { assertEquals(9, it.split(',').size) }
+        rows.take(3).forEach { assertEquals(10, it.split(',').size) }
     }
 
     @Test fun rawRowsWhenKept() {
