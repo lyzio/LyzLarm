@@ -32,6 +32,8 @@ import kotlinx.coroutines.withContext
 import se.lyzio.lyzlarm.R
 import se.lyzio.lyzlarm.app
 import se.lyzio.lyzlarm.data.Alarm
+import se.lyzio.lyzlarm.engine.SleepEngine
+import se.lyzio.lyzlarm.tracking.TrackingService
 import se.lyzio.lyzlarm.tracking.Planner
 import se.lyzio.lyzlarm.tracking.Tracker
 import java.text.SimpleDateFormat
@@ -50,6 +52,7 @@ class RingingService : Service() {
     private var player: MediaPlayer? = null
     private var vibrator: Vibrator? = null
     private var wakeLock: PowerManager.WakeLock? = null
+    private var stayAwakeCheck = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -60,14 +63,23 @@ class RingingService : Service() {
                 val kind = runCatching {
                     AlarmScheduler.Kind.valueOf(intent.getStringExtra(AlarmReceiver.EXTRA_KIND) ?: "")
                 }.getOrDefault(AlarmScheduler.Kind.ALARM)
+                val reason = SleepEngine.WakeReason.parse(intent.getStringExtra(AlarmReceiver.EXTRA_REASON))
+                // Already ringing for this alarm (e.g. an early ring and the fallback close
+                // together): keep ringing, do not start over.
+                val ringing = RingingState.current.value
+                if (ringing != null && ringing.alarmId == alarmId && kind != AlarmScheduler.Kind.TEST) {
+                    Log.i(TAG, "Alarm $alarmId already ringing; ignoring $kind")
+                    if (kind == AlarmScheduler.Kind.ALARM) scope.launch(Dispatchers.IO) { loadAndAdvance(alarmId, kind) }
+                    return START_NOT_STICKY
+                }
                 // Placeholder state first, so the ringing screen has something to show
                 // if it opens before the alarm has loaded.
                 RingingState.set(
                     Ringing(alarmId, kind, placeholderLabel(kind), System.currentTimeMillis(), 0, 0f, true),
                 )
                 // Must be in the foreground within seconds of starting.
-                goForeground(placeholderLabel(kind), System.currentTimeMillis(), snoozeMinutes = 0)
-                start(alarmId, kind)
+                goForeground(placeholderLabel(kind), System.currentTimeMillis(), snoozeMinutes = 0, locked = true)
+                start(alarmId, kind, reason)
             }
             ACTION_DISMISS -> dismiss()
             ACTION_SNOOZE -> snooze()
@@ -76,11 +88,14 @@ class RingingService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun start(alarmId: Long, kind: AlarmScheduler.Kind) {
+    private fun start(alarmId: Long, kind: AlarmScheduler.Kind, smartReason: SleepEngine.WakeReason?) {
         stopPlayback()
         acquireWakeLock()
         ringJob = scope.launch {
             val scheduler = app.scheduler
+            // An early ring while snoozed is a smart snooze; decided before the snooze is cleared.
+            val snoozeRing = kind == AlarmScheduler.Kind.SNOOZE ||
+                (kind == AlarmScheduler.Kind.SMART && scheduler.snoozedUntil(alarmId) != null)
             val alarm: Alarm? = if (kind == AlarmScheduler.Kind.TEST) {
                 scheduler.clearTestMarker()
                 Alarm(id = AlarmScheduler.TEST_ALARM_ID, snoozeMinutes = 0)
@@ -95,6 +110,14 @@ class RingingService : Service() {
             val isTest = kind == AlarmScheduler.Kind.TEST
             val label = if (isTest) "Test alarm" else NextAlarm.label(alarm.repeatDays)
             val now = System.currentTimeMillis()
+            val reason = when {
+                isTest -> null
+                smartReason != null -> smartReason
+                kind == AlarmScheduler.Kind.ALARM && alarm.isSmart -> SleepEngine.WakeReason.WINDOW_END
+                kind == AlarmScheduler.Kind.ALARM -> SleepEngine.WakeReason.FIXED
+                else -> null // end of a snooze
+            }
+            val locked = !isTest && alarm.snoozeLock
             RingingState.set(
                 Ringing(
                     alarmId = alarm.id,
@@ -104,13 +127,24 @@ class RingingService : Service() {
                     snoozeMinutes = alarm.snoozeMinutes,
                     volume = 0f,
                     vibratingOnly = alarm.vibrateFirst,
+                    reason = reason,
+                    snoozeLock = locked,
+                    challengeTypes = alarm.challengeTypes,
+                    mathDifficulty = alarm.mathDifficulty,
                 ),
             )
-            goForeground(label, now, alarm.snoozeMinutes)
+            stayAwakeCheck = !isTest && alarm.stayAwakeCheck
+            goForeground(label, now, alarm.snoozeMinutes, locked)
             if (!isTest) {
                 val context = applicationContext
+                val detail = when (kind) {
+                    AlarmScheduler.Kind.SNOOZE -> "snooze"
+                    AlarmScheduler.Kind.STAY_AWAKE -> "stay_awake"
+                    AlarmScheduler.Kind.SMART -> if (snoozeRing) "snooze;${reason?.key}" else reason?.key
+                    else -> reason?.key
+                }
                 CoroutineScope(Dispatchers.IO).launch {
-                    Tracker.onAlarmRang(context)
+                    Tracker.onAlarmRang(context, detail)
                     Planner.refresh(context)
                 }
             }
@@ -121,13 +155,35 @@ class RingingService : Service() {
     /** Loads the alarm and moves it on: repeating alarms get their next ring, one-time alarms turn off. */
     private suspend fun loadAndAdvance(alarmId: Long, kind: AlarmScheduler.Kind): Alarm? {
         val dao = app.database.alarmDao()
+        val scheduler = app.scheduler
         val alarm = dao.get(alarmId) ?: return null
-        if (kind == AlarmScheduler.Kind.SNOOZE) {
-            app.scheduler.cancelSnooze(alarmId)
-            return alarm
+        when (kind) {
+            AlarmScheduler.Kind.SNOOZE -> {
+                scheduler.cancelSnooze(alarmId)
+                scheduler.cancelEarly(alarmId)
+                return alarm
+            }
+            AlarmScheduler.Kind.STAY_AWAKE -> return alarm
+            AlarmScheduler.Kind.SMART -> {
+                if (scheduler.snoozedUntil(alarmId) != null) {
+                    // Smart snooze: the snooze's own alarm is no longer needed.
+                    scheduler.cancelSnooze(alarmId)
+                    return alarm
+                }
+                // Early ring inside the window: the fallback at the window end is done with.
+                if (alarm.isRepeating) {
+                    scheduler.skip(alarm, scheduler.nextRing(alarm))
+                } else {
+                    scheduler.skip(alarm, scheduler.nextRing(alarm))
+                    dao.update(alarm.copy(enabled = false))
+                }
+                return alarm
+            }
+            else -> Unit
         }
+        scheduler.cancelEarly(alarmId)
         if (alarm.isRepeating) {
-            app.scheduler.schedule(alarm)
+            scheduler.schedule(alarm)
         } else {
             dao.update(alarm.copy(enabled = false))
         }
@@ -226,7 +282,13 @@ class RingingService : Service() {
             val settings = app.settings
             CoroutineScope(Dispatchers.IO).launch { settings.markTestAlarmPassed(System.currentTimeMillis()) }
         } else if (current != null) {
-            endTracking(detail = null)
+            if (stayAwakeCheck && TrackingService.running.value) {
+                val context = applicationContext
+                val id = current.alarmId
+                CoroutineScope(Dispatchers.IO).launch { Tracker.onAlarmDismissedStayAwake(context, id) }
+            } else {
+                endTracking(detail = null)
+            }
         }
         finish()
     }
@@ -238,6 +300,8 @@ class RingingService : Service() {
             val context = applicationContext
             val minutes = current.snoozeMinutes
             CoroutineScope(Dispatchers.IO).launch { Tracker.onSnoozed(context, minutes) }
+            // Smart snooze: tracking keeps running and listens closely until the snooze ends.
+            TrackingService.listenClosely(context)
         }
         finish()
     }
@@ -265,15 +329,15 @@ class RingingService : Service() {
         vibrator = null
     }
 
-    private fun goForeground(label: String, ringTime: Long, snoozeMinutes: Int) {
-        val notification = buildNotification(label, ringTime, snoozeMinutes)
+    private fun goForeground(label: String, ringTime: Long, snoozeMinutes: Int, locked: Boolean) {
+        val notification = buildNotification(label, ringTime, snoozeMinutes, locked)
         val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
         } else 0
         ServiceCompat.startForeground(this, Notifications.ID_RINGING, notification, type)
     }
 
-    private fun buildNotification(label: String, ringTime: Long, snoozeMinutes: Int): Notification {
+    private fun buildNotification(label: String, ringTime: Long, snoozeMinutes: Int, locked: Boolean): Notification {
         val fullScreen = PendingIntent.getActivity(
             this,
             0,
@@ -293,10 +357,15 @@ class RingingService : Service() {
             .setOngoing(true)
             .setContentIntent(fullScreen)
             .setFullScreenIntent(fullScreen, true)
-        if (snoozeMinutes > 0) {
-            builder.addAction(0, "Snooze $snoozeMinutes min", serviceIntent(ACTION_SNOOZE))
+        if (locked) {
+            // Snooze lock: no shortcut buttons; the ringing screen asks for the challenge.
+            builder.setContentText("Snooze lock: open to solve the challenge")
+        } else {
+            if (snoozeMinutes > 0) {
+                builder.addAction(0, "Snooze $snoozeMinutes min", serviceIntent(ACTION_SNOOZE))
+            }
+            builder.addAction(0, "I'm up", serviceIntent(ACTION_DISMISS))
         }
-        builder.addAction(0, "I'm up", serviceIntent(ACTION_DISMISS))
         return builder.build()
     }
 

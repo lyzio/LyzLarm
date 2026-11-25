@@ -2,6 +2,7 @@ package se.lyzio.lyzlarm.alarm
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import se.lyzio.lyzlarm.engine.SleepEngine
 
 /** What is ringing right now; shared between the service and the ringing screen. */
 data class Ringing(
@@ -13,6 +14,13 @@ data class Ringing(
     /** 0..1 — how far the gradual volume has risen. */
     val volume: Float,
     val vibratingOnly: Boolean,
+    /** Why it rang; null for the test alarm. */
+    val reason: SleepEngine.WakeReason? = null,
+    /** Snooze lock on: snooze and "I'm up" need a solved challenge. */
+    val snoozeLock: Boolean = false,
+    /** Allowed challenge types (Challenges bits) and math difficulty, for the lock. */
+    val challengeTypes: Int = 0,
+    val mathDifficulty: Int = 1,
 )
 
 object RingingState {

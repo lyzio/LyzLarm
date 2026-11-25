@@ -88,7 +88,7 @@ class OutOfBedTest {
         val samples = (0 until 600).map { Sample(it * 50L, 3.2f, 1.1f, 9.2f + (it % 2) * 0.01f) }
         val n = MovementScore.noise(samples)
         assertTrue("noise $n", n in 0.004f..0.006f)
-        assertEquals(0f, MovementScore.noise(samples.take(1)))
+        assertEquals(0f, MovementScore.noise(samples.take(1)), 0f)
         assertNotNull(EpochAccumulator().let { acc -> samples.forEach { acc.add(it) }; acc.flush() }?.noise)
     }
 }

@@ -55,6 +55,18 @@ class BedtimeReceiver : BroadcastReceiver() {
             ACTION_NOT_TONIGHT -> manager.cancel(Notifications.ID_REMINDER)
             ACTION_BATTERY_OK -> manager.cancel(Notifications.ID_BATTERY)
             ACTION_STOP_TRACKING -> Tracker.stopManually(context)
+            ACTION_LISTEN, ACTION_STAY_AWAKE_CHECK -> {
+                val service = if (action == ACTION_LISTEN) TrackingService.ACTION_LISTEN else TrackingService.ACTION_STAY_AWAKE_CHECK
+                if (TrackingService.running.value) {
+                    context.startService(android.content.Intent(context, TrackingService::class.java).setAction(service))
+                } else if (Tracker.resumeIfNeeded(context)) {
+                    // Restarted; it plans the window itself. Ask again for the check.
+                    if (action == ACTION_STAY_AWAKE_CHECK) {
+                        runCatching { context.startService(android.content.Intent(context, TrackingService::class.java).setAction(service)) }
+                    }
+                }
+                return
+            }
             ACTION_WATCHDOG -> {
                 if (Tracker.resumeIfNeeded(context)) Planner.scheduleWatchdog(context)
                 return
@@ -123,6 +135,8 @@ class BedtimeReceiver : BroadcastReceiver() {
         const val ACTION_BATTERY_OK = "se.lyzio.lyzlarm.bedtime.BATTERY_OK"
         const val ACTION_STOP_TRACKING = "se.lyzio.lyzlarm.bedtime.STOP_TRACKING"
         const val ACTION_WATCHDOG = "se.lyzio.lyzlarm.bedtime.WATCHDOG"
+        const val ACTION_LISTEN = "se.lyzio.lyzlarm.bedtime.LISTEN"
+        const val ACTION_STAY_AWAKE_CHECK = "se.lyzio.lyzlarm.bedtime.STAY_AWAKE_CHECK"
         private const val TAG = "BedtimeReceiver"
     }
 }

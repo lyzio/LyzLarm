@@ -6,10 +6,12 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import se.lyzio.lyzlarm.engine.Sensitivity
 
 private val Context.dataStore by preferencesDataStore(name = "settings")
 
@@ -25,6 +27,14 @@ data class TrackingSettings(
     val rawOn: Boolean = false,
 )
 
+/** Settings › Alarm defaults (v0.3): used for new alarms; sensitivity applies to all alarms. */
+data class AlarmDefaults(
+    /** Wake window for new alarms; 0 = fixed time. */
+    val windowMinutes: Int = 30,
+    val sensitivity: Sensitivity = Sensitivity.BALANCED,
+    val snoozeMinutes: Int = 9,
+)
+
 /** App settings live in DataStore, not in the database (design doc). */
 class Settings(private val context: Context) {
     private val onboardingDoneKey = booleanPreferencesKey("onboarding_done")
@@ -36,6 +46,9 @@ class Settings(private val context: Context) {
     private val warningThresholdKey = intPreferencesKey("battery_warning_threshold")
     private val warningFixedKey = intPreferencesKey("battery_warning_fixed_minute")
     private val rawOnKey = booleanPreferencesKey("raw_samples_on")
+    private val defaultWindowKey = intPreferencesKey("default_window_minutes")
+    private val sensitivityKey = stringPreferencesKey("wake_sensitivity")
+    private val defaultSnoozeKey = intPreferencesKey("default_snooze_minutes")
 
     val onboardingDone: Flow<Boolean> = context.dataStore.data.map { it[onboardingDoneKey] ?: false }
 
@@ -45,6 +58,22 @@ class Settings(private val context: Context) {
     val tracking: Flow<TrackingSettings> = context.dataStore.data.map(::toTracking)
 
     suspend fun tracking(): TrackingSettings = tracking.first()
+
+    val alarmDefaults: Flow<AlarmDefaults> = context.dataStore.data.map {
+        AlarmDefaults(
+            windowMinutes = it[defaultWindowKey] ?: 30,
+            sensitivity = Sensitivity.parse(it[sensitivityKey]),
+            snoozeMinutes = it[defaultSnoozeKey] ?: 9,
+        )
+    }
+
+    suspend fun alarmDefaults(): AlarmDefaults = alarmDefaults.first()
+
+    suspend fun setDefaultWindow(minutes: Int) = context.dataStore.edit { it[defaultWindowKey] = minutes }
+
+    suspend fun setSensitivity(s: Sensitivity) = context.dataStore.edit { it[sensitivityKey] = s.name }
+
+    suspend fun setDefaultSnooze(minutes: Int) = context.dataStore.edit { it[defaultSnoozeKey] = minutes }
 
     suspend fun isOnboardingDone(): Boolean = onboardingDone.first()
 

@@ -14,6 +14,7 @@ class AlarmReceiver : BroadcastReceiver() {
             .setAction(RingingService.ACTION_START)
             .putExtra(EXTRA_ALARM_ID, alarmId)
             .putExtra(EXTRA_KIND, kind)
+            .putExtra(EXTRA_REASON, intent.getStringExtra(EXTRA_REASON))
         // Alarm-clock broadcasts are allowed to start a foreground service from the background.
         ContextCompat.startForegroundService(context, service)
     }
@@ -21,5 +22,6 @@ class AlarmReceiver : BroadcastReceiver() {
     companion object {
         const val EXTRA_ALARM_ID = "alarm_id"
         const val EXTRA_KIND = "kind"
+        const val EXTRA_REASON = "reason"
     }
 }

@@ -38,6 +38,13 @@ interface NightDao {
     @Query("SELECT * FROM nights WHERE end_time IS NOT NULL ORDER BY start_time DESC LIMIT 1")
     fun observeLatestFinished(): Flow<Night?>
 
+    /** Finished nights, for the smart-wake learning mode ("night 3 of 7"). */
+    @Query("SELECT COUNT(*) FROM nights WHERE end_time IS NOT NULL")
+    suspend fun finishedCount(): Int
+
+    @Query("SELECT COUNT(*) FROM nights WHERE end_time IS NOT NULL")
+    fun observeFinishedCount(): Flow<Int>
+
     @Query("SELECT start_time FROM nights WHERE start_time >= :since ORDER BY start_time DESC")
     suspend fun startTimesSince(since: Long): List<Long>
 
@@ -52,6 +59,9 @@ interface NightDao {
 
     @Query("SELECT * FROM epochs WHERE night_id = :nightId ORDER BY time")
     suspend fun epochs(nightId: Long): List<EpochRow>
+
+    @Query("SELECT * FROM epochs WHERE night_id = :nightId AND time >= :from ORDER BY time")
+    suspend fun epochsSince(nightId: Long, from: Long): List<EpochRow>
 
     @Query("SELECT time FROM epochs WHERE night_id = :nightId ORDER BY time")
     suspend fun epochTimes(nightId: Long): List<Long>
@@ -70,6 +80,9 @@ interface NightDao {
 
     @Query("SELECT * FROM events WHERE night_id = :nightId ORDER BY time")
     suspend fun events(nightId: Long): List<EventRow>
+
+    @Query("SELECT * FROM events WHERE night_id = :nightId AND type = :type ORDER BY time LIMIT 1")
+    suspend fun firstEvent(nightId: Long, type: String): EventRow?
 
     @Query("SELECT * FROM events WHERE night_id = :nightId ORDER BY time DESC")
     fun observeEvents(nightId: Long): Flow<List<EventRow>>
