@@ -166,6 +166,10 @@ class TrackingService : Service(), SensorEventListener2 {
             return@withLock
         }
         nightId = night.id
+        // A stay-awake check left over from an earlier night must not touch this one.
+        if (stayAwakeFrom() in 1 until night.startTime) {
+            prefs.edit().remove(KEY_SA_FROM).remove(KEY_SA_COUNT).remove(KEY_SA_ALARM).apply()
+        }
         rawOn = app.settings.tracking().rawOn
         coveredUntil = dao.lastEpochTime(night.id)?.plus(SleepEngine.EPOCH_MS) ?: night.startTime
         _running.value = true

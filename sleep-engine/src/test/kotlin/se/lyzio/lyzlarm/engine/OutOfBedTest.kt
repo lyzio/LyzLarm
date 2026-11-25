@@ -53,7 +53,8 @@ class OutOfBedTest {
     }
 
     @Test fun oldNightsWithoutNoiseAreNotFlagged() {
-        val night = Nights.join(Nights.still(60), move(), Nights.still(30))
+        // Recorded before v0.3: no noise on any epoch.
+        val night = Nights.join(Nights.still(60), Nights.of(40f), Nights.still(30))
         val r = NightAnalysis.analyze(night, 0L, night.size * E, ref = ref)
         assertTrue(r.outOfBedReliable)
         assertTrue(r.outOfBed.isEmpty())
