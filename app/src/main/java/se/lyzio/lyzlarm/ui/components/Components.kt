@@ -214,6 +214,53 @@ fun ChipRow(options: List<String>, selected: Int, enabled: Boolean, onSelect: (I
     }
 }
 
+/** Chips where several can be on (Snooze lock challenge types). */
+@Composable
+fun MultiChipRow(options: List<String>, selected: Set<Int>, onToggle: (Int) -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        options.forEachIndexed { i, label ->
+            val on = i in selected
+            Box(
+                Modifier
+                    .weight(1f)
+                    .heightIn(min = 44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (on) Lz.Highlight else Lz.Surface)
+                    .then(if (on) Modifier else Modifier.border(1.dp, Lz.Outline, RoundedCornerShape(12.dp)))
+                    .toggleable(value = on, role = Role.Checkbox) { onToggle(i) }
+                    .padding(horizontal = 4.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    label,
+                    color = if (on) Color.White else Lz.TextSoft,
+                    fontSize = 13.sp,
+                    fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+            }
+        }
+    }
+}
+
+/** Label (and optional explanation) with a switch, inside a grouped card. */
+@Composable
+fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit, detail: String? = null, showDivider: Boolean = false) {
+    Column {
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(label, color = Lz.Text, fontSize = 15.sp)
+                if (detail != null) Text(detail, color = Lz.TextMuted, fontSize = 12.sp, lineHeight = 16.sp)
+            }
+            LzSwitch(checked, onChange, contentDescription = label)
+        }
+        if (showDivider) HorizontalDivider(color = Lz.Divider, thickness = 1.dp)
+    }
+}
+
 /** A row inside a grouped card: label on the left, value on the right. */
 @Composable
 fun ValueRow(label: String, value: String, onClick: (() -> Unit)?, showDivider: Boolean, trailing: (@Composable RowScope.() -> Unit)? = null) {

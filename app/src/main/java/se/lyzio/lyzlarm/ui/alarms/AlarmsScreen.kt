@@ -257,7 +257,11 @@ private fun NextWakeCard(alarms: List<Alarm>, now: Long) {
                 color = androidx.compose.ui.graphics.Color.White,
             )
             Text(
-                if (snoozed) "Snoozed" else "Fixed time · smart wake arrives in v0.3",
+                when {
+                    snoozed -> "Snoozed"
+                    alarm.isSmart -> "${Format.time(context, ringAt - alarm.windowMinutes * 60_000L)}–${Format.time(context, ringAt)} · smart wake"
+                    else -> "Fixed time"
+                },
                 color = Lz.HighlightSoft,
                 fontSize = 14.sp,
             )
@@ -288,7 +292,9 @@ private fun AlarmCard(alarm: Alarm, onClick: () -> Unit, onToggle: (Boolean) -> 
                 color = if (alarm.enabled) Lz.Text else Lz.TextMuted,
             )
             Text(
-                "${NextAlarm.describeRepeat(alarm.repeatDays)} · fixed time",
+                NextAlarm.describeRepeat(alarm.repeatDays) +
+                    (if (alarm.isSmart) " · ${alarm.windowMinutes} min window" else " · fixed time") +
+                    (if (alarm.snoozeLock) " · snooze lock" else ""),
                 fontSize = 13.sp,
                 color = if (alarm.enabled) Lz.TextMuted else Lz.TextDim,
             )

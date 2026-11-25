@@ -143,7 +143,20 @@ private fun NightRow(s: NightSummary, onClick: () -> Unit, onLongClick: () -> Un
                 }
             }
         }
-        Text(Format.measured(s.trackedMs), color = Lz.Text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            val r = s.result
+            Text(
+                (r?.let { Format.measured(it.asleepMs) } ?: Format.measured(s.trackedMs)) + " asleep",
+                color = Lz.Text,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+            )
+            Text(
+                (r?.let { Format.measured(it.inBedMs) } ?: Format.measured(s.trackedMs)) + " in bed",
+                color = Lz.TextMuted,
+                fontSize = 12.sp,
+            )
+        }
         LzIcon(R.drawable.ic_chevron, null, tint = Lz.TextMuted, size = 18.dp)
     }
 }

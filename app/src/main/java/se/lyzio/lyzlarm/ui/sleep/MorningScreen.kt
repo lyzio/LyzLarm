@@ -72,7 +72,11 @@ import se.lyzio.lyzlarm.data.EventType
 import se.lyzio.lyzlarm.data.Night
 import se.lyzio.lyzlarm.engine.Bars
 import se.lyzio.lyzlarm.engine.Gap
+import se.lyzio.lyzlarm.engine.NightAnalysis
+import se.lyzio.lyzlarm.engine.NightResult
 import se.lyzio.lyzlarm.engine.SleepEngine
+import se.lyzio.lyzlarm.engine.Stage
+import se.lyzio.lyzlarm.engine.StagePoint
 import se.lyzio.lyzlarm.tracking.NightCsv
 import se.lyzio.lyzlarm.tracking.NightExport
 import se.lyzio.lyzlarm.tracking.NightStats
@@ -87,6 +91,18 @@ import java.time.ZoneId
 import kotlin.math.sqrt
 
 private val BarColor = Color(0xFF4FB3A9)
+private val WindowColor = Lz.Accent.copy(alpha = 0.22f)
+private val OutOfBedColor = Lz.Warning.copy(alpha = 0.35f)
+
+/** "at light sleep" etc., under the Woke tile. */
+fun wakeReasonText(reason: String?): String? = when (SleepEngine.WakeReason.parse(reason)) {
+    SleepEngine.WakeReason.LIGHT_SLEEP -> "at light sleep"
+    SleepEngine.WakeReason.ALREADY_AWAKE -> "already awake"
+    SleepEngine.WakeReason.WINDOW_END -> "end of window"
+    SleepEngine.WakeReason.FIXED -> "fixed time"
+    SleepEngine.WakeReason.MANUAL -> "stopped by hand"
+    null -> null
+}
 
 private data class NightData(val summary: NightSummary, val epochs: List<EpochRow>)
 
@@ -102,6 +118,11 @@ fun MorningScreen(nightId: Long, onBack: () -> Unit, onOpenNights: () -> Unit) {
         if (nightId == 0L) dao.observeLatestFinished() else dao.observeNight(nightId)
     }.collectAsState(initial = null)
     val open by remember { dao.observeOpenNight() }.collectAsState(initial = null)
+    val openEvents by remember(open?.id) {
+        open?.let { dao.observeEvents(it.id) } ?: flowOf(emptyList())
+    }.collectAsState(initial = emptyList())
+    // Newest first: a dismiss after the last ring means the stay-awake check is running.
+    val stayAwakeRunning = openEvents.firstOrNull { it.type == EventType.RANG || it.type == EventType.DISMISSED }?.type == EventType.DISMISSED
     val events by remember(night?.id) {
         night?.let { dao.observeEvents(it.id) } ?: flowOf(emptyList())
     }.collectAsState(initial = emptyList())
@@ -121,8 +142,10 @@ fun MorningScreen(nightId: Long, onBack: () -> Unit, onOpenNights: () -> Unit) {
         )
         val d = data
         when {
-            // Just dismissed: the night is still being saved.
-            nightId == 0L && open != null -> Message("Saving last night…")
+            // Just dismissed: the night is still being saved (or the stay-awake check runs).
+            nightId == 0L && open != null -> Message(
+                if (stayAwakeRunning) "Stay-awake check: tracking runs 5 more minutes. Last night is saved after that." else "Saving last night…",
+            )
             n == null || d == null -> if (n == null) Message("No tracked nights yet.") else Unit
             else -> NightContent(n, d, events)
         }
@@ -170,24 +193,41 @@ private fun NightContent(night: Night, data: NightData, events: List<EventRow>) 
             fontSize = 30.sp,
             color = Lz.Text,
         )
+        val r = data.summary.result
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Tile("Tracked", Format.measured(data.summary.trackedMs), Lz.Text, Modifier.weight(1f))
-            Tile("Started", Format.time(context, night.startTime), Lz.Text, Modifier.weight(1f))
-            Tile("Woke", night.wakeTime?.let { Format.time(context, it) } ?: "–", Lz.AccentText, Modifier.weight(1f))
+            Tile("Time asleep", r?.let { Format.measured(it.asleepMs) } ?: "–", Lz.Text, Modifier.weight(1f))
+            Tile("In bed", r?.let { Format.measured(it.inBedMs) } ?: Format.measured(data.summary.trackedMs), Lz.Text, Modifier.weight(1f))
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Tile("Fell asleep in", r?.fellAsleepMs?.let { Format.measured(it) } ?: "–", Lz.Text, Modifier.weight(1f))
+            Tile(
+                "Woke",
+                night.wakeTime?.let { Format.time(context, it) } ?: "–",
+                Lz.AccentText,
+                Modifier.weight(1f),
+                sub = wakeReasonText(night.wakeReason),
+            )
         }
 
         val alarmAt = events.filter { it.type == EventType.RANG }.minOfOrNull { it.time }
             ?: night.wakeTime.takeIf { night.wakeReason == SleepEngine.WakeReason.FIXED.name }
+        val window = events.firstOrNull { it.type == EventType.WINDOW_OPENED }?.detail?.split(';')
+            ?.takeIf { it.size == 3 }?.let { parts -> parts[1].toLongOrNull()?.let { a -> parts[2].toLongOrNull()?.let { b -> a to b } } }
         Column(
             Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Lz.Surface).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            if (r != null && r.onsetMs != null) {
+                StageGraph(start = night.startTime, end = data.summary.endOrNow, result = r)
+            }
             MovementGraph(
                 start = night.startTime,
                 end = data.summary.endOrNow,
                 epochs = data.epochs,
                 gaps = data.summary.gaps,
                 alarmAt = alarmAt,
+                window = window,
+                outOfBed = r?.outOfBed.orEmpty().map { it.startMs to it.endMs },
             )
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -195,7 +235,17 @@ private fun NightContent(night: Night, data: NightData, events: List<EventRow>) 
             ) {
                 LegendItem("Movement (5 min)") { Box(Modifier.size(10.dp).clip(RoundedCornerShape(2.dp)).background(BarColor)) }
                 LegendItem("Not tracked") { HatchSwatch() }
+                if (window != null) LegendItem("Wake window") { Box(Modifier.size(10.dp).clip(RoundedCornerShape(2.dp)).background(WindowColor)) }
+                if (r?.outOfBed?.isNotEmpty() == true) LegendItem("Out of bed") { Box(Modifier.size(10.dp).clip(RoundedCornerShape(2.dp)).background(OutOfBedColor)) }
                 LegendItem("Alarm") { Box(Modifier.size(8.dp).clip(CircleShape).background(Lz.Accent)) }
+            }
+            if (r != null && !r.outOfBedReliable) {
+                Text(
+                    "Out-of-bed detection was not reliable tonight: lying still looked like the empty bed. Nothing was counted as out of bed.",
+                    color = Lz.TextMuted,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                )
             }
             val bStart = night.batteryStart
             val bEnd = night.batteryEnd
@@ -269,7 +319,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.hatch(topLeft: Offs
 }
 
 @Composable
-private fun Tile(label: String, value: String, valueColor: Color, modifier: Modifier) {
+private fun Tile(label: String, value: String, valueColor: Color, modifier: Modifier, sub: String? = null) {
     Column(
         modifier.clip(RoundedCornerShape(14.dp)).background(Lz.Surface).padding(horizontal = 12.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -281,12 +331,21 @@ private fun Tile(label: String, value: String, valueColor: Color, modifier: Modi
             maxLines = 1,
             autoSize = TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = 18.sp),
         )
+        if (sub != null) Text(sub, color = Lz.TextMuted, fontSize = 12.sp, maxLines = 1)
     }
 }
 
 /** Movement bars per 5 min, gaps hatched, alarm as an accent line with a dot, time axis every 2 h. */
 @Composable
-private fun MovementGraph(start: Long, end: Long, epochs: List<EpochRow>, gaps: List<Gap>, alarmAt: Long?) {
+private fun MovementGraph(
+    start: Long,
+    end: Long,
+    epochs: List<EpochRow>,
+    gaps: List<Gap>,
+    alarmAt: Long?,
+    window: Pair<Long, Long>?,
+    outOfBed: List<Pair<Long, Long>>,
+) {
     val context = LocalContext.current
     val measurer = rememberTextMeasurer()
     val bars = remember(epochs) { Bars.of(epochs.map { it.time to it.movement }) }
@@ -310,6 +369,18 @@ private fun MovementGraph(start: Long, end: Long, epochs: List<EpochRow>, gaps: 
         drawText(measurer, "More", Offset(0f, top - 2.dp.toPx()), labelStyle)
         drawText(measurer, "Still", Offset(0f, top + plotH - 14.dp.toPx()), labelStyle)
         drawLine(Lz.Divider, Offset(axisW, top + plotH), Offset(size.width, top + plotH), 1.dp.toPx())
+
+        // Wake window and out-of-bed bands, behind everything else.
+        if (window != null) {
+            val l = x(window.first)
+            val r = x(window.second)
+            if (r - l > 0.5f) drawRect(WindowColor, Offset(l, top), Size(r - l, plotH))
+        }
+        for ((a, b) in outOfBed) {
+            val l = x(a)
+            val r = x(b)
+            if (r - l > 0.5f) drawRect(OutOfBedColor, Offset(l, top), Size(maxOf(r - l, 2f), plotH))
+        }
 
         // Gaps.
         for (g in gaps) {
@@ -349,6 +420,60 @@ private fun MovementGraph(start: Long, end: Long, epochs: List<EpochRow>, gaps: 
     }
 }
 
+/** Estimated stages (Awake / Light / Deep) per 5 minutes as a step line, labelled as an estimate. */
+@Composable
+private fun StageGraph(start: Long, end: Long, result: NightResult) {
+    val measurer = rememberTextMeasurer()
+    val labelStyle = TextStyle(color = Lz.TextMuted, fontSize = 11.sp)
+    val blocks = remember(result) { NightAnalysis.blocks(result.stages) }
+    val deep = result.stages.count { it.stage == Stage.DEEP } * SleepEngine.EPOCH_MS
+    val light = result.stages.count { it.stage == Stage.LIGHT } * SleepEngine.EPOCH_MS
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Sleep stages", color = Lz.Text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Text("Estimate", color = Lz.TextMuted, fontSize = 12.sp)
+        }
+        Canvas(
+            Modifier
+                .fillMaxWidth()
+                .height(84.dp)
+                .semantics {
+                    contentDescription = "Estimated sleep stages: deep ${Format.measured(deep)}, light ${Format.measured(light)}"
+                },
+        ) {
+            val axisW = 44.dp.toPx()
+            val plotW = size.width - axisW
+            val rowH = size.height / 3f
+            val span = (end - start).coerceAtLeast(60_000L).toFloat()
+            fun x(t: Long) = axisW + ((t - start) / span).coerceIn(0f, 1f) * plotW
+            fun y(stage: Stage) = rowH * stage.ordinal + rowH / 2f
+            listOf(Stage.AWAKE to "Awake", Stage.LIGHT to "Light", Stage.DEEP to "Deep").forEach { (st, label) ->
+                val layout = measurer.measure(label, labelStyle)
+                drawText(layout, topLeft = Offset(0f, y(st) - layout.size.height / 2f))
+                drawLine(Lz.Divider, Offset(axisW, y(st)), Offset(size.width, y(st)), 1.dp.toPx())
+            }
+            val blockW = Bars.BAR_MS / span * plotW
+            var prev: StagePoint? = null
+            for (b in blocks) {
+                val l = x(b.timeMs)
+                val color = when (b.stage) {
+                    Stage.AWAKE -> Lz.AccentSoft
+                    Stage.LIGHT -> BarColor
+                    Stage.DEEP -> Lz.Highlight
+                }
+                val p = prev
+                // Vertical step from the previous block, unless there was a gap.
+                if (p != null && b.timeMs - p.timeMs == Bars.BAR_MS && p.stage != b.stage) {
+                    drawLine(Lz.TextDim, Offset(l, y(p.stage)), Offset(l, y(b.stage)), 1.5.dp.toPx())
+                }
+                drawLine(color, Offset(l, y(b.stage)), Offset(l + blockW, y(b.stage)), 4.dp.toPx(), StrokeCap.Butt)
+                prev = b
+            }
+        }
+        Text("Deep ${Format.measured(deep)} · Light ${Format.measured(light)}", color = Lz.TextSoft, fontSize = 13.sp)
+    }
+}
+
 /** Even hours (…22:00, 00:00, 02:00…) between start and end. */
 private fun twoHourTicks(start: Long, end: Long): List<Long> {
     val zone = ZoneId.systemDefault()
@@ -362,16 +487,34 @@ private fun twoHourTicks(start: Long, end: Long): List<Long> {
     return out
 }
 
+private fun challengeName(key: String?): String =
+    se.lyzio.lyzlarm.challenge.ChallengeType.entries.firstOrNull { it.key == key }?.label?.lowercase() ?: (key ?: "")
+
 @Composable
 private fun EventLine(e: EventRow) {
     val context = LocalContext.current
     val (icon, text) = when (e.type) {
-        EventType.RANG -> R.drawable.ic_alarm to "Alarm rang"
+        EventType.RANG -> R.drawable.ic_alarm to when {
+            e.detail == "stay_awake" -> "Alarm rang again (back in bed)"
+            e.detail?.startsWith("snooze") == true -> if (e.detail.contains("light_sleep")) "Snooze ended at light sleep" else "Snooze ended"
+            else -> "Alarm rang" + (wakeReasonText(e.detail)?.let { " · $it" } ?: "")
+        }
+        EventType.WINDOW_OPENED -> R.drawable.ic_clock to (e.detail?.split(';')?.firstOrNull()?.let { "Wake window opened · $it min" } ?: "Listening closely")
+        EventType.LIGHT_SLEEP_DETECTED -> R.drawable.ic_wave to if (e.detail == "already_awake") "Already awake detected" else "Light sleep detected"
+        EventType.OUT_OF_BED -> R.drawable.ic_sleep to "Out of bed"
+        EventType.BACK_IN_BED -> R.drawable.ic_sleep to "Back in bed"
+        EventType.CHALLENGE_SHOWN -> R.drawable.ic_lock to "Challenge shown · ${challengeName(e.detail)}"
+        EventType.CHALLENGE_SOLVED -> R.drawable.ic_check to "Challenge solved · ${challengeName(e.detail)}"
+        EventType.CHALLENGE_FAILED -> R.drawable.ic_lock to "Wrong answer · ${challengeName(e.detail)}"
+        EventType.STAY_AWAKE_RANG -> R.drawable.ic_warning to "Stay-awake check: back in bed"
         EventType.SNOOZED -> R.drawable.ic_clock to "Snoozed ${e.detail ?: ""} min"
         EventType.DISMISSED -> R.drawable.ic_check to if (e.detail == "no response") "Alarm stopped, no response" else "Alarm dismissed"
         EventType.TRACKING_INTERRUPTED -> R.drawable.ic_warning to "Tracking interrupted for ${e.detail ?: "?"} min"
         EventType.TRACKING_STARTED -> R.drawable.ic_moon to ("Tracking started" + (e.detail?.let { " · battery $it%" } ?: ""))
-        EventType.TRACKING_STOPPED -> R.drawable.ic_moon to ("Tracking stopped" + (e.detail?.split(';')?.getOrNull(1)?.let { " · battery $it%" } ?: ""))
+        EventType.TRACKING_STOPPED -> R.drawable.ic_moon to (
+            "Tracking stopped" + (e.detail?.split(';')?.getOrNull(1)?.let { " · battery $it%" } ?: "") +
+                (if (e.detail?.contains("alarm_off") == true) " · alarm turned off" else "")
+            )
         else -> R.drawable.ic_info to e.type
     }
     Row(

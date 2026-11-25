@@ -10,17 +10,34 @@ import se.lyzio.lyzlarm.data.EpochRow
 import se.lyzio.lyzlarm.data.Night
 import se.lyzio.lyzlarm.engine.Gap
 import se.lyzio.lyzlarm.engine.Gaps
+import se.lyzio.lyzlarm.engine.NightAnalysis
+import se.lyzio.lyzlarm.engine.NightResult
+import se.lyzio.lyzlarm.data.EventType
 import java.io.File
 
-/** A night with its gaps worked out, for lists and the morning screen. */
-data class NightSummary(val night: Night, val gaps: List<Gap>, val trackedMs: Long) {
+/**
+ * A night with its gaps worked out, for lists and the morning screen. [result] holds time
+ * asleep, time in bed, onset, out-of-bed periods and the stage estimate (v0.3); computed
+ * when shown, not stored.
+ */
+data class NightSummary(val night: Night, val gaps: List<Gap>, val trackedMs: Long, val result: NightResult? = null) {
     val endOrNow: Long get() = night.endTime ?: System.currentTimeMillis()
 }
 
 object NightStats {
     suspend fun summary(context: Context, night: Night): NightSummary {
-        val times = context.app.database.nightDao().epochTimes(night.id)
-        return summary(night, times)
+        val dao = context.app.database.nightDao()
+        val epochs = dao.epochs(night.id)
+        val end = night.endTime ?: System.currentTimeMillis()
+        val firstRing = dao.firstEvent(night.id, EventType.RANG)?.time
+        val result = NightAnalysis.analyze(
+            points = epochs.map { it.toPoint() },
+            startMs = night.startTime,
+            endMs = end,
+            awakeFromMs = firstRing,
+            ref = emptyBedReference(context),
+        )
+        return summary(night, epochs.map { it.time }).copy(result = result)
     }
 
     fun summary(night: Night, epochTimes: List<Long>): NightSummary {

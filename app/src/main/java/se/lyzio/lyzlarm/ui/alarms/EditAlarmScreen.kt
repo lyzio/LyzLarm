@@ -59,6 +59,20 @@ import kotlinx.coroutines.withContext
 import se.lyzio.lyzlarm.alarm.NextAlarm
 import se.lyzio.lyzlarm.app
 import se.lyzio.lyzlarm.data.Alarm
+import se.lyzio.lyzlarm.data.AlarmDefaults
+import se.lyzio.lyzlarm.data.Challenges
+import se.lyzio.lyzlarm.challenge.ChallengeType
+import se.lyzio.lyzlarm.challenge.MathProblem
+import se.lyzio.lyzlarm.engine.Sensitivity
+import se.lyzio.lyzlarm.engine.WakeRules
+import se.lyzio.lyzlarm.ui.components.MultiChipRow
+import se.lyzio.lyzlarm.ui.components.SwitchRow
+import android.Manifest
+import android.content.pm.PackageManager
+import android.widget.Toast
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.runtime.collectAsState
+import androidx.core.content.ContextCompat
 import se.lyzio.lyzlarm.ui.Format
 import se.lyzio.lyzlarm.ui.components.ChipRow
 import se.lyzio.lyzlarm.ui.components.SectionLabel
@@ -80,6 +94,9 @@ private enum class WakeUpStyle(val label: String, val vibrateFirst: Boolean, val
 }
 
 private val SNOOZE_OPTIONS = listOf(0, 5, 9, 10, 15)
+val WINDOW_OPTIONS = listOf(0, 15, 20, 30, 45)
+val WINDOW_LABELS = listOf("Off", "15 min", "20 min", "30 min", "45 min")
+private val TYPE_BITS = listOf(Challenges.MATH, Challenges.MEMORY, Challenges.TYPING, Challenges.BARCODE)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,12 +105,25 @@ fun EditAlarmScreen(alarmId: Long, onDone: () -> Unit) {
     val container = context.app
     val scope = rememberCoroutineScope()
 
-    var loaded by remember { mutableStateOf(alarmId == 0L) }
+    var loaded by remember { mutableStateOf(false) }
     var alarm by remember { mutableStateOf(Alarm(repeatDays = 0b0011111)) }
     LaunchedEffect(alarmId) {
         if (alarmId != 0L) {
             withContext(Dispatchers.IO) { container.database.alarmDao().get(alarmId) }?.let { alarm = it }
-            loaded = true
+        } else {
+            // New alarm: wake window and snooze from Settings › Alarm defaults.
+            val d = container.settings.alarmDefaults()
+            alarm = alarm.copy(windowMinutes = d.windowMinutes, snoozeMinutes = d.snoozeMinutes)
+        }
+        loaded = true
+    }
+    val defaults by container.settings.alarmDefaults.collectAsState(initial = AlarmDefaults())
+    val finishedNights by container.database.nightDao().observeFinishedCount().collectAsState(initial = 0)
+    val cameraPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+            alarm = alarm.copy(challengeTypes = alarm.challengeTypes or Challenges.BARCODE)
+        } else {
+            Toast.makeText(context, "Barcode scan needs the camera", Toast.LENGTH_SHORT).show()
         }
     }
     if (!loaded) return
@@ -115,6 +145,7 @@ fun EditAlarmScreen(alarmId: Long, onDone: () -> Unit) {
     }
 
     val time = Format.time(context, alarm.hour, alarm.minute)
+    val windowStart = Format.minuteOfDay(context, Math.floorMod(alarm.hour * 60 + alarm.minute - alarm.windowMinutes, 24 * 60))
 
     fun save() {
         scope.launch {
@@ -173,17 +204,42 @@ fun EditAlarmScreen(alarmId: Long, onDone: () -> Unit) {
             ) {
                 Text("Wake me by", color = Lz.TextMuted, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 Text(time, fontFamily = SpaceGrotesk, fontWeight = FontWeight.SemiBold, fontSize = 60.sp, letterSpacing = (-2).sp, color = Lz.Text)
-                Text("Rings at exactly $time", color = Lz.TextSoft, fontSize = 14.sp)
+                Text(
+                    if (alarm.isSmart) "Rings between $windowStart and $time" else "Rings at exactly $time",
+                    color = Lz.TextSoft,
+                    fontSize = 14.sp,
+                )
             }
 
-            // Shown but disabled until v0.3 (design decision 21 Nov 2026).
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                SectionLabel("Smart wake window", badge = "Arrives in v0.3")
-                ChipRow(listOf("Off", "10 min", "20 min", "30 min", "45 min"), selected = 3, enabled = false) {}
+                SectionLabel("Smart wake window")
+                ChipRow(WINDOW_LABELS, selected = WINDOW_OPTIONS.indexOf(alarm.windowMinutes).coerceAtLeast(0), enabled = true) {
+                    alarm = alarm.copy(windowMinutes = WINDOW_OPTIONS[it])
+                }
+                Text(
+                    if (alarm.isSmart) "Rings at the first clear light sleep in the window, and always by $time. Needs sleep tracking that night; without it, it rings at $time."
+                    else "Off: rings at $time.",
+                    color = Lz.TextMuted,
+                    fontSize = 12.sp,
+                    lineHeight = 17.sp,
+                )
             }
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                SectionLabel("Sensitivity", badge = "Arrives in v0.3")
-                Segmented(listOf("Cautious", "Balanced", "Eager"), selected = 1, onSelect = {}, enabled = false)
+            if (alarm.isSmart) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SectionLabel("Sensitivity · all alarms")
+                    Segmented(
+                        listOf("Cautious", "Balanced", "Eager"),
+                        selected = defaults.sensitivity.ordinal,
+                        onSelect = { i -> scope.launch { container.settings.setSensitivity(Sensitivity.entries[i]) } },
+                    )
+                    WakeRules.learningNight(finishedNights)?.let { n ->
+                        Text(
+                            "Learning your sleep: night $n of ${WakeRules.LEARNING_NIGHTS}. Until then it wakes you cautiously.",
+                            color = Lz.TextMuted,
+                            fontSize = 12.sp,
+                        )
+                    }
+                }
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -225,8 +281,20 @@ fun EditAlarmScreen(alarmId: Long, onDone: () -> Unit) {
                 )
             }
 
+            SnoozeLockSection(
+                alarm = alarm,
+                onChange = { alarm = it },
+                onWantBarcode = {
+                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                        alarm = alarm.copy(challengeTypes = alarm.challengeTypes or Challenges.BARCODE)
+                    } else {
+                        cameraPermission.launch(Manifest.permission.CAMERA)
+                    }
+                },
+            )
+
             Text(
-                "Rings at $time. Smart wake arrives in v0.3.",
+                if (alarm.isSmart) "Rings at light sleep between $windowStart and $time." else "Rings at $time.",
                 color = Lz.TextMuted,
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center,
@@ -302,6 +370,61 @@ fun EditAlarmScreen(alarmId: Long, onDone: () -> Unit) {
             },
             onDismiss = { showSnooze = false },
         )
+    }
+}
+
+@Composable
+private fun SnoozeLockSection(alarm: Alarm, onChange: (Alarm) -> Unit, onWantBarcode: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SectionLabel("Snooze lock")
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Lz.Surface)) {
+            SwitchRow(
+                "Snooze lock",
+                alarm.snoozeLock,
+                { onChange(alarm.copy(snoozeLock = it)) },
+                detail = "Solve a challenge before you can snooze or turn the alarm off.",
+                showDivider = alarm.snoozeLock,
+            )
+            if (alarm.snoozeLock) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Challenges (one picked at random)", color = Lz.TextMuted, fontSize = 13.sp)
+                    MultiChipRow(
+                        ChallengeType.entries.map { if (it == ChallengeType.BARCODE) "Barcode" else it.label },
+                        selected = TYPE_BITS.indices.filter { alarm.challengeTypes and TYPE_BITS[it] != 0 }.toSet(),
+                    ) { i ->
+                        val bit = TYPE_BITS[i]
+                        val on = alarm.challengeTypes and bit != 0
+                        when {
+                            // At least one type must stay on.
+                            on && (alarm.challengeTypes and bit.inv()) == 0 -> Unit
+                            on -> onChange(alarm.copy(challengeTypes = alarm.challengeTypes and bit.inv()))
+                            bit == Challenges.BARCODE -> onWantBarcode()
+                            else -> onChange(alarm.copy(challengeTypes = alarm.challengeTypes or bit))
+                        }
+                    }
+                    if (alarm.challengeTypes and Challenges.BARCODE != 0) {
+                        Text(
+                            "Barcode: scan any barcode you have not used in the last 7 days. Only a fingerprint of each code is kept, for 7 days. \"Can't scan?\" always switches to another challenge.",
+                            color = Lz.TextMuted,
+                            fontSize = 12.sp,
+                            lineHeight = 17.sp,
+                        )
+                    }
+                    if (alarm.challengeTypes and Challenges.MATH != 0) {
+                        Text("Math difficulty", color = Lz.TextMuted, fontSize = 13.sp)
+                        Segmented(MathProblem.DIFFICULTIES, selected = alarm.mathDifficulty, onSelect = { onChange(alarm.copy(mathDifficulty = it)) })
+                    }
+                }
+                HorizontalDivider(color = Lz.Divider)
+                SwitchRow(
+                    "Stay-awake check",
+                    alarm.stayAwakeCheck,
+                    { onChange(alarm.copy(stayAwakeCheck = it)) },
+                    detail = "Keeps tracking 5 minutes after the challenge. If you are back in bed and still, it rings again. " +
+                        "Without the empty bed test it rings again if the phone lies still for 5 minutes, so take the phone with you.",
+                )
+            }
+        }
     }
 }
 

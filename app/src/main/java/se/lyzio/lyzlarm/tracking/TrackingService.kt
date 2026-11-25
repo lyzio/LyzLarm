@@ -265,7 +265,8 @@ class TrackingService : Service(), SensorEventListener2 {
     private suspend fun windowDetail(): String? {
         val night = app.database.nightDao().night(nightId) ?: return null
         val plan = Tracker.wakePlan(this, night) ?: return null
-        return if (plan.isSmart) "${plan.alarm.windowMinutes}" else null
+        // "minutes;start;end" so the Morning graph can draw the window band exactly.
+        return if (plan.isSmart) "${plan.alarm.windowMinutes};${plan.startMs};${plan.endMs}" else null
     }
 
     // Sensor thread.

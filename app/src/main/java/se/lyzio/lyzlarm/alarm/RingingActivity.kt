@@ -34,7 +34,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import se.lyzio.lyzlarm.MainActivity
 import se.lyzio.lyzlarm.R
+import se.lyzio.lyzlarm.app
+import se.lyzio.lyzlarm.engine.SleepEngine
+import se.lyzio.lyzlarm.tracking.Tracker
 import se.lyzio.lyzlarm.tracking.TrackingService
+import se.lyzio.lyzlarm.ui.challenge.ChallengeScreen
+import se.lyzio.lyzlarm.ui.challenge.LockedAction
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import se.lyzio.lyzlarm.ui.components.LzIcon
 import se.lyzio.lyzlarm.ui.components.PrimaryButton
 import se.lyzio.lyzlarm.ui.components.SecondaryButton
@@ -70,23 +79,44 @@ class RingingActivity : ComponentActivity() {
                 LaunchedEffect(current == null) {
                     if (current == null) finish()
                 }
+                var locked by rememberSaveable { mutableStateOf<LockedAction?>(null) }
                 if (current != null) {
-                    RingingScreen(
-                        ringing = current,
-                        onDismiss = {
-                            val tracking = TrackingService.running.value && current.kind != AlarmScheduler.Kind.TEST
-                            RingingService.send(this, RingingService.ACTION_DISMISS)
-                            // Show last night's graph (after unlocking, if the phone is locked).
-                            if (tracking) {
-                                startActivity(
-                                    Intent(this, MainActivity::class.java)
-                                        .setAction(MainActivity.ACTION_OPEN_MORNING)
-                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
-                                )
-                            }
-                        },
-                        onSnooze = { RingingService.send(this, RingingService.ACTION_SNOOZE) },
-                    )
+                    val dismiss = {
+                        val tracking = TrackingService.running.value && current.kind != AlarmScheduler.Kind.TEST
+                        RingingService.send(this, RingingService.ACTION_DISMISS)
+                        // Show last night's graph (after unlocking, if the phone is locked).
+                        if (tracking) {
+                            startActivity(
+                                Intent(this, MainActivity::class.java)
+                                    .setAction(MainActivity.ACTION_OPEN_MORNING)
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                            )
+                        }
+                    }
+                    val snooze = { RingingService.send(this, RingingService.ACTION_SNOOZE) }
+                    val action = locked
+                    if (action != null && current.snoozeLock) {
+                        ChallengeScreen(
+                            action = action,
+                            types = current.challengeTypes,
+                            mathDifficulty = current.mathDifficulty,
+                            onSolved = {
+                                locked = null
+                                if (action == LockedAction.SNOOZE) snooze() else dismiss()
+                            },
+                            onBack = { locked = null },
+                            onEvent = { type, detail ->
+                                val context = applicationContext
+                                app.scope.launch { Tracker.event(context, type, detail) }
+                            },
+                        )
+                    } else {
+                        RingingScreen(
+                            ringing = current,
+                            onDismiss = { if (current.snoozeLock) locked = LockedAction.DISMISS else dismiss() },
+                            onSnooze = { if (current.snoozeLock) locked = LockedAction.SNOOZE else snooze() },
+                        )
+                    }
                 }
             }
         }
@@ -98,6 +128,16 @@ private fun RingingScreen(ringing: Ringing, onDismiss: () -> Unit, onSnooze: () 
     val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(ringing.ringTimeMillis))
     val date = SimpleDateFormat("EEEE d MMMM", Locale.getDefault()).format(Date(ringing.ringTimeMillis))
     val isTest = ringing.kind == AlarmScheduler.Kind.TEST
+    val clock = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(ringing.ringTimeMillis))
+    val (headline, explanation) = when {
+        isTest -> "Test alarm" to "It works. Tap \"I'm up\" to finish the test."
+        ringing.kind == AlarmScheduler.Kind.STAY_AWAKE -> "You went back to bed" to "The stay-awake check found you lying still again."
+        ringing.reason == SleepEngine.WakeReason.LIGHT_SLEEP -> "Light sleep at $clock" to "You were moving, a good moment to wake up."
+        ringing.reason == SleepEngine.WakeReason.ALREADY_AWAKE -> "You were already awake" to "You kept moving for a few minutes, so the alarm rang now."
+        ringing.reason == SleepEngine.WakeReason.WINDOW_END -> "End of your window" to "No light sleep found in the window, so it rang at your latest time."
+        ringing.reason == SleepEngine.WakeReason.FIXED -> "Fixed time" to "This alarm has no wake window."
+        else -> "Snooze over" to "Time to get up."
+    }
 
     Column(
         Modifier
@@ -125,10 +165,9 @@ private fun RingingScreen(ringing: Ringing, onDismiss: () -> Unit, onSnooze: () 
         ) {
             LzIcon(R.drawable.ic_info, null, tint = Lz.RingingTextSoft, size = 22.dp)
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(ringing.label, color = Lz.RingingText, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text(headline, color = Lz.RingingText, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 Text(
-                    if (isTest) "It works. Tap \"I'm up\" to finish the test."
-                    else "Fixed time. Smart wake at light sleep arrives in v0.3.",
+                    if (isTest) explanation else "$explanation ${ringing.label}.",
                     color = Lz.RingingTextSoft,
                     fontSize = 13.sp,
                     lineHeight = 19.sp,
@@ -169,6 +208,12 @@ private fun RingingScreen(ringing: Ringing, onDismiss: () -> Unit, onSnooze: () 
         }
         Spacer(Modifier.weight(1f))
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (ringing.snoozeLock) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    LzIcon(R.drawable.ic_lock, null, tint = Lz.RingingTextSoft, size = 18.dp)
+                    Text("Snooze lock: both buttons ask for a challenge", color = Lz.RingingTextSoft, fontSize = 13.sp)
+                }
+            }
             PrimaryButton("I'm up", onDismiss, height = 64.dp)
             if (!isTest && ringing.snoozeMinutes > 0) {
                 SecondaryButton(
