@@ -73,7 +73,7 @@ fun TestAlarmScreen(step: Int?, onDone: () -> Unit) {
             when {
                 passed -> {
                     SetupTitle("Your alarm works")
-                    SetupBody("The test alarm rang on this phone. LyzLarm is ready to wake you.")
+                    SetupBody("The test alarm rang on this phone. Anatole is ready to wake you.")
                 }
                 overdue -> {
                     SetupTitle("It didn't ring")
@@ -88,8 +88,8 @@ fun TestAlarmScreen(step: Int?, onDone: () -> Unit) {
                 else -> {
                     SetupTitle("Let's test the alarm")
                     SetupBody(
-                        if (target == null) "LyzLarm will ring in one minute, just like a real morning. Start the test, then lock your screen."
-                        else "Lock your screen now. LyzLarm will ring in one minute, just like a real morning. This proves the alarm works on your phone.",
+                        if (target == null) "Anatole will ring in one minute, just like a real morning. Start the test, then lock your screen."
+                        else "Lock your screen now. Anatole will ring in one minute, just like a real morning. This proves the alarm works on your phone.",
                     )
                     if (target != null) {
                         Column(
@@ -114,7 +114,7 @@ fun TestAlarmScreen(step: Int?, onDone: () -> Unit) {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         LzIcon(R.drawable.ic_info, null, tint = Lz.TextMuted, size = 20.dp)
                         Text(
-                            "If it doesn't ring, LyzLarm shows which setting to fix. You can run this test any time from System check.",
+                            "If it doesn't ring, Anatole shows which setting to fix. You can run this test any time from System check.",
                             color = Lz.TextMuted,
                             fontSize = 13.sp,
                             lineHeight = 19.sp,

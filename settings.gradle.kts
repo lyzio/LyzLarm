@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "LyzLarm"
+rootProject.name = "Anatole"
 include(":app", ":sleep-engine")

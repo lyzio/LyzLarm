@@ -187,12 +187,13 @@ fun BedtimeScreen(onFinished: (Long) -> Unit, onBack: () -> Unit, startOnOpen: B
                     color = Lz.Text,
                 )
                 val p = plan
+                val ringAt = alarmAt
                 Text(
                     when {
-                        alarmAt == null -> "No alarm set"
-                        p != null && p.isSmart && p.endMs == alarmAt ->
+                        ringAt == null -> "No alarm set"
+                        p != null && p.isSmart && p.endMs == ringAt ->
                             "Wake ${Format.time(context, p.startMs)}–${Format.time(context, p.endMs)}"
-                        else -> "Alarm ${Format.time(context, alarmAt)}"
+                        else -> "Alarm ${Format.time(context, ringAt)}"
                     },
                     color = Lz.AccentText,
                     fontSize = 16.sp,

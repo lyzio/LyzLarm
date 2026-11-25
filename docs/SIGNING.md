@@ -63,5 +63,5 @@ Release with `LyzLarm-0.1.0.apk` attached. The website updates itself after that
 
 ## Note on debug vs release
 
-Debug APKs from every push install as a separate app (**LyzLarm** with package
+Debug APKs from every push install as a separate app (**Anatole** with package
 `se.lyzio.lyzlarm.debug`), so you can test builds without touching your real alarms.

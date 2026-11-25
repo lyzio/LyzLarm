@@ -1,7 +1,67 @@
-# v0.2 test checklist (test phone: Fairphone 6, Android 16)
+# v0.3 test checklist (test phone: Fairphone 6, Android 16)
 
 Install the debug APK from the pull request's latest **Build** run (Actions › run ›
-Artifacts › `lyzlarm-debug-…`, unzip, open the `.apk` on the phone). It installs as a
+Artifacts › `anatole-debug-…`, unzip, open the `.apk`). It installs over the v0.2 test
+build and keeps your alarms and nights. Each check below is also a "To Test" issue
+under milestone v0.3; close it when it passes, or comment what went wrong.
+
+Existing alarms keep a **fixed time** after the update (window Off), so nothing rings
+earlier than you set. Turn the wake window on in Edit alarm to try smart wake. New
+alarms get the window from Settings › Alarm defaults (30 min).
+
+## Name and upgrade
+- [ ] The launcher shows **Anatole**; About shows "Anatole · Sleep tracker & alarm", version 0.3.0 and the story of the name
+- [ ] Upgrading from v0.2 keeps all alarms and past nights; old nights open with time asleep and in bed
+
+## Smart wake
+- [ ] Edit alarm: wake window chips (Off, 15, 20, 30, 45 min) work; header says "Rings between 06:30 and 07:00"
+- [ ] Alarms tab: the next-alarm card reads "06:30–07:00 · smart wake"; the alarm row says "30 min window"
+- [ ] Bedtime: "Wake 06:30–07:00", Smart wake window row "06:30–07:00 · Cautious" (learning) and "Learning your sleep · night N of 7"
+- [ ] Short test: alarm 40 min ahead with a 30 min window, start sleep, lie still, then move a lot after the window opens: it rings within about a minute, and the ringing screen says "Light sleep at HH:MM"
+- [ ] Lie still through the whole window: it rings exactly at the alarm time, ringing screen says "End of your window"
+- [ ] Without tracking (no Start sleep), a smart alarm rings at the alarm time
+- [ ] An alarm with the window Off rings at its time and says "Fixed time"
+- [ ] Repeating alarm that rang early: it rings again the next repeat day, not again the same morning
+- [ ] Smart snooze: snooze 9 min and move after about 5 min: it rings early ("Snooze ended at light sleep" in the events); lying still, it rings after 9 min
+
+## Stopping early (#71)
+- [ ] Start sleep, then Hold to stop before the alarm: the alarm does not ring that morning; the event list says "Tracking stopped · alarm turned off"
+- [ ] A repeating alarm stopped early rings again on its next day; a one-time alarm is switched off
+
+## Bedtime reminder (#26)
+- [ ] Reminder's **Start sleep** opens the Bedtime screen and tracking starts (notification appears); **Not tonight** closes it
+
+## Morning screen
+- [ ] Tiles: Time asleep, In bed, Fell asleep in, Woke (with reason underneath)
+- [ ] Sleep stages curve labelled "Estimate", with Deep / Light totals
+- [ ] Graph: pink wake window band, alarm marker; legend shows Wake window
+- [ ] Event list: Wake window opened, Light sleep detected, Alarm rang · at light sleep
+- [ ] Past nights: each row shows "… asleep" and "… in bed"
+
+## Empty bed test and out of bed
+- [ ] Settings › System check › Empty bed test: 30 s to leave, 10 min countdown, then "Saved" with the noise level
+- [ ] Someone on the bed during the test: "Not saved", Try again
+- [ ] The row shows the last run date; **Export** shares a CSV
+- [ ] Bedtime "Out of bed" row says "Active" after the test, "Run the empty bed test" before it
+- [ ] Get up for 5+ min during a night: either an "Out of bed" band and events appear, or the Morning screen says detection was not reliable tonight (report which)
+
+## Snooze lock
+- [ ] Edit alarm › Snooze lock on: the notification has no Snooze / I'm up buttons; the ringing screen says both buttons ask for a challenge
+- [ ] Math (try Easy, Normal, Hard), Memory and Typing each work; a wrong answer shows "Not quite" and Retry gives a new one
+- [ ] The alarm keeps ringing (vibration and rising volume) during the challenge; Back returns to the ringing screen
+- [ ] Barcode: turning it on asks for the camera; a new code solves it; the same code again within 7 days is refused; "Can't scan?" switches to another challenge
+- [ ] Stay-awake check: after solving, lie back down still: it rings again after about 5 minutes ("Alarm rang again (back in bed)")
+- [ ] Stay-awake check: get up and walk around with the phone: no second ring; the night is saved after 5 minutes
+
+## Overnight (5–7 nights)
+For each night note in the PR: wake time and reason, whether it felt like a good moment,
+out-of-bed accuracy (or "not reliable"), how believable the stage curve looks, battery at
+start and end. Send two or three night CSVs (they now include a `noise` column).
+
+# Regression: v0.2 checks (test phone: Fairphone 6, Android 16)
+
+Install the debug APK from the pull request's latest **Build** run (Actions › run ›
+Artifacts › `anatole-debug-…`, unzip, open the `.apk` on the phone). It installs as a
 separate app next to any release build. Tick each box; note anything odd in the PR.
 
 Coming from the v0.1 debug build: **uninstall it first** (it was signed with a one-off
@@ -34,7 +94,7 @@ builds share one fixed test key, so later builds install over earlier ones.
 - [ ] The tracking notification is gone
 
 ## Robustness
-- [ ] Kill the app while tracking (Settings › Apps › LyzLarm › Force stop is too strong; instead swipe it away in Recents): tracking continues or comes back within 15 min
+- [ ] Kill the app while tracking (Settings › Apps › Anatole › Force stop is too strong; instead swipe it away in Recents): tracking continues or comes back within 15 min
 - [ ] **Restart the phone** while tracking and unlock it: the tracking notification comes back by itself; the night later shows a hatched "Not tracked" area and "Tracking interrupted for N min"
 - [ ] The alarm rings on time in both cases
 
@@ -93,4 +153,4 @@ Send two or three night CSVs, at least one with raw sensor data on.
 - [ ] About shows version 0.2.0-debug, links open the browser, Open-source licenses lists the fonts
 
 ## Privacy
-- [ ] Android Settings › Apps › LyzLarm › Permissions shows no network access (the build also checks this)
+- [ ] Android Settings › Apps › Anatole › Permissions shows no network access (the build also checks this)

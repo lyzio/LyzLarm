@@ -1,0 +1,13 @@
+Anatole is a smart alarm with sleep tracking that never touches the internet. The app has no internet permission, no accounts and no ads; your nights stay on your phone.
+
+<b>Smart wake.</b> Set the latest time you want to be up and a wake window (15–45 minutes). Put the phone on the mattress at bedtime and Anatole follows your movement through the night. Inside the window it rings at the first clear light sleep, and always by your latest time.
+
+<b>Your night in the morning.</b> Time asleep, time in bed, how long it took to fall asleep, a movement graph and an estimated sleep-stage curve. Export any night as CSV.
+
+<b>Snooze lock.</b> Optionally, solve a small challenge (math, memory, typing, or scanning a barcode) before you can snooze or turn the alarm off.
+
+<b>A reliable alarm first.</b> Uses Android's alarm clock, a setup check and a test alarm, so it rings even if tracking fails.
+
+Anatole is named after the Greek goddess of sunrise, one of the Horai.
+
+Free software under GPL-3.0-or-later.

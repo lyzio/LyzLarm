@@ -34,7 +34,7 @@ const labels = [
 const milestones = [
   ["v0.1", "M1 – Reliable alarm: alarms list and editor, setAlarmClock, ringing screen, gradual volume, survives reboot and battery savers.", "closed"],
   ["v0.2", "M2 – Tracking: foreground service, accelerometer batching, epochs saved, basic morning graph with gaps shown.", "open"],
-  ["v0.3", "M3 – Smart wake: sleep engine v1, wake window decision with fallback, wake reason shown.", "open"],
+  ["v0.3", "M3 – Smart wake: sleep engine v1, wake window decision with fallback, wake reason shown, out-of-bed detection, Snooze lock. App renamed to Anatole.", "open"],
   ["v0.4", "M4 – Sound: mic in the last 1–2 hours, sound features in the decision, mic period in the graph.", "open"],
   ["v0.5", "M5 – Learning and history: morning rating, personal baseline, cycle estimate, trends, export/import.", "open"],
   ["v0.6", "M6 – Release: F-Droid packaging, reproducible build, GPL-3.0-or-later.", "open"],
@@ -48,7 +48,7 @@ const issues = [
   ["Reliable ringing", "v0.1", "done", "`setAlarmClock`, full-screen ringing screen over the lock screen, vibration first then the sound fades in, fixed snooze."],
   ["Survives restart, time-zone change and updates", "v0.1", "done", "Alarms are re-armed after a reboot, a clock or time-zone change and an app update."],
   ["Setup with test alarm and System check", "v0.1", "done", "First-run setup ends with an alarm proven to ring on this phone; Settings › System check keeps it that way."],
-  ["Build, release pipeline and website", "v0.1", "done", "Every push builds a debug APK; tag `v*` builds a signed release; website at lyzio.github.io/LyzLarm with release and roadmap."],
+  ["Build, release pipeline and website", "v0.1", "done", "Every push builds a debug APK; tag `v*` builds a signed release; website at lyzio.github.io/Anatole with release and roadmap."],
   // v0.2 – Tracking
   ["Sleep tracking all night", "v0.2", "in progress", "Start sleep at bedtime, phone on the mattress: movement recorded every 30 s by a battery-friendly foreground service that survives app kills and restarts."],
   ["Morning screen with movement graph and gaps", "v0.2", "in progress", "After the alarm: tracked time, start and wake time, movement graph per 5 min, alarm marker, tracking gaps and the night's events."],
@@ -57,13 +57,17 @@ const issues = [
   ["Night export (CSV) and raw sensor data", "v0.2", "in progress", "Share or save any night as CSV; optional raw sensor recording (deleted after 3 days) for tuning smart wake."],
   ["New logo: the moon holds the sun", "v0.2", "in progress", "Logo C for the app icon, themed icon, notification icon, app screens and website."],
   // v0.3 – Smart wake
-  ["Light-sleep detection", "v0.3", "planned", "Sleep engine v1: light sleep = movement above your restless level in at least 2 of the last 4 readings (default), never a single twitch."],
-  ["Smart wake window", "v0.3", "planned", "Rings at clear light sleep inside the wake window (default 30 min), immediately if already awake, and always by the end of the window."],
-  ["Wake reason on the morning screen", "v0.3", "planned", "Every wake-up records which rule fired (light sleep, already awake, window end) and shows it in the morning."],
-  ["Sensitivity setting and learning mode", "v0.3", "planned", "Cautious / Balanced (default) / Eager; the first ~7 nights use cautious general thresholds."],
-  ["Out-of-bed detection", "v0.3", "planned", "No movement is not always deep sleep: breathing shows as tiny movement in bed, an empty bed shows only sensor noise. Out-of-bed time counts as awake and gets its own band in the graph. Tuned on raw-data nights."],
-  ["Empty bed test", "v0.3", "planned", "Settings › System check: the phone lies where it does at night and records 10 minutes with nobody in bed. Kept as the empty-bed reference for out-of-bed detection; re-run after a mattress or placement change; exports as CSV. From v0.4 also the room's quiet sound level."],
-  ["Smart snooze", "v0.3", "planned", "Snooze rings again at the next light-sleep moment, at the latest after the snooze length; tracking keeps running."],
+  ["Light-sleep detection", "v0.3", "in progress", "Sleep engine v1: light sleep = movement above your restless level in at least 2 of the last 4 readings (default), never a single twitch."],
+  ["Smart wake window", "v0.3", "in progress", "Rings at clear light sleep inside the wake window (default 30 min), immediately if already awake, and always by the end of the window."],
+  ["Wake reason on the morning screen", "v0.3", "in progress", "Every wake-up records which rule fired (light sleep, already awake, window end) and shows it in the morning."],
+  ["Sensitivity setting and learning mode", "v0.3", "in progress", "Cautious / Balanced (default) / Eager; the first ~7 nights use cautious general thresholds."],
+  ["Out-of-bed detection", "v0.3", "in progress", "No movement is not always deep sleep: breathing shows as tiny movement in bed, an empty bed shows only sensor noise. Out-of-bed time counts as awake and gets its own band in the graph. Tuned on raw-data nights."],
+  ["Empty bed test", "v0.3", "in progress", "Settings › System check: the phone lies where it does at night and records 10 minutes with nobody in bed. Kept as the empty-bed reference for out-of-bed detection; re-run after a mattress or placement change; exports as CSV. From v0.4 also the room's quiet sound level."],
+  ["Smart snooze", "v0.3", "in progress", "Snooze rings again at the next light-sleep moment, at the latest after the snooze length; tracking keeps running."],
+  ["Time asleep", "v0.3", "in progress", "Morning screen and Past nights show time asleep next to time in bed: in bed and still enough to count as sleep (same rules as light-sleep detection), minus out-of-bed time (#67)."],
+  ["Time to fall asleep", "v0.3", "in progress", "From tracking start to the first stretch accepted as sleep; stored as the night's onset estimate and shown on the Morning screen. Later (v0.5) the usual value is learned."],
+  ["Sleep-stage estimate", "v0.3", "in progress", "The Morning screen shows an estimated Awake / Light / Deep curve from movement, labelled as an estimate (decided 25 Nov 2026)."],
+  ["Snooze lock", "v0.3", "in progress", "Optional per alarm: snooze and \"I'm up\" need a solved challenge (math, memory, typing; barcode scan optional, codes not reused within 7 days, only a fingerprint stored). Optional stay-awake check rings again if you go back to bed. Moved from v0.5 to v0.3 (25 Nov 2026)."],
   // v0.4 – Sound
   ["Sound tracking in the last hours", "v0.4", "planned", "Microphone in the last 1–2 hours, analyzed live; only numbers are saved, nothing is recorded."],
   ["Sound in the wake decision", "v0.4", "planned", "Rustling and breathing changes count as extra evidence, so less movement is needed when sound agrees."],
@@ -85,6 +89,7 @@ const issues = [
   ["Smart-home build", "Later", "planned", "Separate build with local-network access: Hue / diyHue wake-up light, Hue plug for the coffee."],
   ["Webhooks and MQTT", "Later", "planned", "For Home Assistant, Shelly and Tasmota (smart-home build)."],
   ["On-device ML model", "Later", "planned", "Once months of data exist; runs on the phone only."],
+  ["Wake sounds", "Later", "planned", "Nature sounds for waking: \"Forest sunrise\" by default (dawn air, then birds, then a melody, rising over 2–3 min), plus 2–3 more. Freesound CC0 / CC BY, credited in the app. Built when the sound files are ready."],
 ];
 
 async function main() {

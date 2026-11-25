@@ -1,6 +1,6 @@
 name: Website
 
-# Rebuilds lyzio.github.io/LyzLarm only when something is merged to master or a
+# Rebuilds lyzio.github.io/Anatole only when something is merged to master or a
 # release is published (so the site shows the new version). Branches and pull
 # requests never build it; roadmap issue edits show up at the next rebuild.
 # The Release workflow creates releases with the built-in token, which does not

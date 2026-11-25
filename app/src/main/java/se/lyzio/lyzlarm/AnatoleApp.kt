@@ -17,7 +17,7 @@ import se.lyzio.lyzlarm.tracking.Planner
 import se.lyzio.lyzlarm.tracking.Tracker
 
 /** Manual dependency injection: one container for the whole app. */
-class LyzLarmApp : Application() {
+class AnatoleApp : Application() {
     val database by lazy { AppDatabase.create(this) }
     val settings by lazy { Settings(this) }
     val scheduler by lazy { AlarmScheduler(this, database.alarmDao()) }
@@ -44,9 +44,9 @@ class LyzLarmApp : Application() {
                 database.nightDao().observeOpenNight(),
             ) { _, _, _ -> Unit }
                 .debounce(1_000L)
-                .collect { runCatching { Planner.refresh(this@LyzLarmApp) } }
+                .collect { runCatching { Planner.refresh(this@AnatoleApp) } }
         }
     }
 }
 
-val Context.app: LyzLarmApp get() = applicationContext as LyzLarmApp
+val Context.app: AnatoleApp get() = applicationContext as AnatoleApp

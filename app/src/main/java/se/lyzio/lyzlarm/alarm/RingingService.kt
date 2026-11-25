@@ -382,7 +382,7 @@ class RingingService : Service() {
     private fun acquireWakeLock() {
         if (wakeLock?.isHeld == true) return
         wakeLock = getSystemService(PowerManager::class.java)
-            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "LyzLarm:ringing")
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Anatole:ringing")
             .apply { acquire(MAX_RING_MS + 60_000L) }
     }
 

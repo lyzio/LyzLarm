@@ -45,14 +45,14 @@ jobs:
           APK=$(ls app/build/outputs/apk/debug/*.apk | head -1)
           "$AAPT2" dump permissions "$APK" | tee permissions.txt
           if grep -q 'android.permission.INTERNET' permissions.txt; then
-            echo "::error::The APK requests INTERNET permission. LyzLarm must stay offline."
+            echo "::error::The APK requests INTERNET permission. Anatole must stay offline."
             exit 1
           fi
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: lyzlarm-debug-${{ github.sha }}
+          name: anatole-debug-${{ github.sha }}
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 30
 

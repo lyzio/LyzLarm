@@ -1,0 +1,1 @@
+Smart wake at light sleep inside your wake window; time asleep, time in bed, time to fall asleep and an estimated stage curve; out-of-bed detection with an empty bed test; optional Snooze lock. LyzLarm is now called Anatole.

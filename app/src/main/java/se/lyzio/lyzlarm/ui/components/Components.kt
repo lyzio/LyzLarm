@@ -296,7 +296,7 @@ fun LogoBadge() {
     ) {
         androidx.compose.foundation.Image(
             painterResource(se.lyzio.lyzlarm.R.drawable.logo_mark),
-            contentDescription = "LyzLarm logo",
+            contentDescription = "Anatole logo",
             modifier = Modifier.size(68.dp),
         )
     }

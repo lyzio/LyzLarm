@@ -24,7 +24,7 @@
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
 
     <application
-        android:name=".LyzLarmApp"
+        android:name=".AnatoleApp"
         android:allowBackup="false"
         android:fullBackupContent="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -32,7 +32,7 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.LyzLarm"
+        android:theme="@style/Theme.Anatole"
         tools:targetApi="36">
 
         <activity

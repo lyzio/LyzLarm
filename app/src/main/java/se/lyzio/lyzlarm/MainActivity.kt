@@ -37,7 +37,7 @@ import se.lyzio.lyzlarm.ui.setup.SetupFlow
 import se.lyzio.lyzlarm.ui.setup.TestAlarmScreen
 import se.lyzio.lyzlarm.ui.sleep.BedtimeScreen
 import se.lyzio.lyzlarm.ui.sleep.MorningScreen
-import se.lyzio.lyzlarm.ui.theme.LyzLarmTheme
+import se.lyzio.lyzlarm.ui.theme.AnatoleTheme
 import se.lyzio.lyzlarm.ui.theme.Lz
 
 class MainActivity : ComponentActivity() {
@@ -52,7 +52,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch { app.scheduler.rescheduleAll() }
         if (savedInstanceState == null) pendingAction.value = intent?.action
         setContent {
-            LyzLarmTheme {
+            AnatoleTheme {
                 Box(Modifier.fillMaxSize().background(Lz.Base)) { AppRoot(pendingAction) }
             }
         }

@@ -20,7 +20,7 @@ import org.robolectric.annotation.Config
  * result matches the v2 schema; then we check the alarms survived and the new tables work.
  */
 @RunWith(AndroidJUnit4::class)
-// Plain Application: the test must not start LyzLarmApp's background work.
+// Plain Application: the test must not start AnatoleApp's background work.
 @Config(sdk = [34], application = android.app.Application::class)
 class MigrationTest {
     private val context: Context = ApplicationProvider.getApplicationContext()

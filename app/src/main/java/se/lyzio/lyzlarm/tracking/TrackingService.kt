@@ -227,10 +227,10 @@ class TrackingService : Service(), SensorEventListener2 {
         if (!batching) {
             // No safe batching: keep the CPU awake so no samples are lost.
             fallbackLock = getSystemService(PowerManager::class.java)
-                .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "LyzLarm:tracking")
+                .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Anatole:tracking")
                 .apply { setReferenceCounted(false); acquire(Tracker.MAX_NIGHT_MS) }
         }
-        val thread = HandlerThread("LyzLarm-sensor").also { it.start() }
+        val thread = HandlerThread("Anatole-sensor").also { it.start() }
         sensorThread = thread
         val h = Handler(thread.looper)
         handler = h
@@ -249,7 +249,7 @@ class TrackingService : Service(), SensorEventListener2 {
         val h = handler ?: return
         listeningClosely = true
         closeLock = getSystemService(PowerManager::class.java)
-            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "LyzLarm:listening")
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Anatole:listening")
             .apply { setReferenceCounted(false); acquire(CLOSE_LOCK_MS) }
         // Deliver what is still batched first, then switch to no batching.
         sm.flush(this)
@@ -490,7 +490,7 @@ class TrackingService : Service(), SensorEventListener2 {
 
     private fun acquireDrainLock() {
         val lock = drainLock ?: getSystemService(PowerManager::class.java)
-            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "LyzLarm:drain")
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Anatole:drain")
             .also { it.setReferenceCounted(false); drainLock = it }
         lock.acquire(DRAIN_LOCK_TIMEOUT_MS)
     }

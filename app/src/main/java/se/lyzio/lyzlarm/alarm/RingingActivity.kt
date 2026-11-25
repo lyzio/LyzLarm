@@ -47,7 +47,7 @@ import kotlinx.coroutines.launch
 import se.lyzio.lyzlarm.ui.components.LzIcon
 import se.lyzio.lyzlarm.ui.components.PrimaryButton
 import se.lyzio.lyzlarm.ui.components.SecondaryButton
-import se.lyzio.lyzlarm.ui.theme.LyzLarmTheme
+import se.lyzio.lyzlarm.ui.theme.AnatoleTheme
 import se.lyzio.lyzlarm.ui.theme.Lz
 import se.lyzio.lyzlarm.ui.theme.SpaceGrotesk
 import java.text.SimpleDateFormat
@@ -73,7 +73,7 @@ class RingingActivity : ComponentActivity() {
         })
 
         setContent {
-            LyzLarmTheme {
+            AnatoleTheme {
                 val ringing by RingingState.current.collectAsState()
                 val current = ringing
                 LaunchedEffect(current == null) {
