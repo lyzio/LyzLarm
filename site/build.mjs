@@ -94,7 +94,8 @@ async function main() {
     ["Reliable alarm", "0.1", "Rings on time with the screen locked, after restarts and time-zone changes."],
     ["Sleep tracking", "0.2", "Movement all night with the phone on the mattress, and a sleep graph every morning."],
     ["Smart wake window", "0.3", "Rings at light sleep inside your window, never after your latest time."],
-    ["Sound in the last hours", "0.4", "The microphone helps in the last 1–2 hours. Analyzed live, never recorded."],
+    ["On Google Play", "0.4", "Also on Google Play (testing first), besides GitHub and, later, F-Droid. Same app, same key."],
+    ["Sound in the last hours", "0.5", "The microphone helps in the last 1–2 hours. Analyzed live, never recorded."],
     ["Learns how you sleep", "0.5", "Your own baseline and cycle length, tuned by a quick morning rating."],
     ["Your own backups", "0.5", "Weekly copies to a folder you choose, ready for Nextcloud or Syncthing."],
   ];
@@ -168,6 +169,8 @@ async function main() {
   await writeFile(join(dist, "index.html"), html);
   await writeFile(join(dist, ".nojekyll"), "");
   await cp(join(here, "fonts"), join(dist, "fonts"), { recursive: true });
+  // Privacy policy (v0.4): linked from the site, the app's About screen and the Play listing.
+  await cp(join(here, "privacy.html"), join(dist, "privacy.html"));
   console.log(
     `Built site: release ${releaseVersion ?? "none"}, ${issues.length} roadmap issues ` +
       `(${columns.planned.length} planned, ${columns.progress.length} in progress, ${columns.done.length} done)`,

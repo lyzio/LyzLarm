@@ -65,13 +65,11 @@ import se.lyzio.anatole.ui.sleep.MorningScreen
 import se.lyzio.anatole.ui.theme.AnatoleTheme
 import se.lyzio.anatole.ui.theme.Lz
 import se.lyzio.anatole.ui.theme.SpaceGrotesk
-import java.awt.image.BufferedImage
 import java.io.File
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.Locale
 import java.util.TimeZone
-import javax.imageio.ImageIO
 
 /**
  * Google Play / F-Droid store images (v0.4), rendered from the real screens on the JVM
@@ -348,10 +346,8 @@ class StoreScreenshots {
         }
         val pixels = IntArray(w * h)
         bitmap.getPixels(pixels, 0, w, 0, 0, w, h)
-        val rgb = BufferedImage(w, h, BufferedImage.TYPE_INT_RGB)
-        rgb.setRGB(0, 0, w, h, pixels, 0, w)
         file.parentFile?.mkdirs()
-        check(ImageIO.write(rgb, "png", file)) { "No PNG writer" }
+        file.writeBytes(Png.rgb(w, h, pixels))
         println("Store image: ${file.path} ($w×$h, captured ${captured.width}×${captured.height})")
     }
 

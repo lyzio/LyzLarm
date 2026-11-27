@@ -41,6 +41,7 @@ import se.lyzio.anatole.ui.theme.SpaceGrotesk
 
 const val SOURCE_URL = "https://github.com/lyzio/Anatole"
 const val WEBSITE_URL = "https://lyzio.github.io/Anatole"
+const val PRIVACY_URL = "$WEBSITE_URL/privacy.html"
 
 @Composable
 fun BackHeader(title: String, onBack: () -> Unit) {
@@ -105,6 +106,7 @@ fun AboutScreen(onBack: () -> Unit, onOpenLicenses: () -> Unit) {
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Lz.Surface)) {
                 LinkRow("Source code", "github.com/lyzio/Anatole", divider = true) { open(SOURCE_URL) }
                 LinkRow("Website", "lyzio.github.io/Anatole", divider = true) { open(WEBSITE_URL) }
+                LinkRow("Privacy policy", "lyzio.github.io/Anatole/privacy.html", divider = true) { open(PRIVACY_URL) }
                 LinkRow("License", "GPL-3.0-or-later", divider = true) { open("$SOURCE_URL/blob/master/LICENSE") }
                 LinkRow("Open-source licenses", "Fonts, libraries", divider = false, onClick = onOpenLicenses)
             }
