@@ -20,13 +20,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.test.SemanticsNodeInteraction
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -111,6 +109,8 @@ class StoreScreenshots {
         Locale.setDefault(Locale.UK)
         val app = compose.activity.app
         Settings.System.putString(app.contentResolver, Settings.System.TIME_12_24, "24")
+        shadowOf(app.getSystemService(android.os.BatteryManager::class.java))
+            .setIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY, 88)
         // Tuesday 24 November 2026, 23:40: bedtime.
         AppClock.fixed = at(24, 23, 40)
 
@@ -186,11 +186,11 @@ class StoreScreenshots {
         val u = with(d) { 1.toDp() } // one pixel, so the layout is in feature-graphic pixels
         Box(Modifier.size(w, h).background(Lz.Base).testTag(FEATURE)) {
             Row(
-                Modifier.fillMaxSize().padding(horizontal = u * 96),
+                Modifier.fillMaxSize().padding(horizontal = u * 72),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(u * 56),
+                horizontalArrangement = Arrangement.spacedBy(u * 40),
             ) {
-                Image(painterResource(R.drawable.logo_mark), null, Modifier.size(u * 260))
+                Image(painterResource(R.drawable.logo_mark), null, Modifier.size(u * 230))
                 Column(verticalArrangement = Arrangement.spacedBy(u * 14)) {
                     Text(
                         "Anatole",
@@ -200,8 +200,8 @@ class StoreScreenshots {
                         letterSpacing = with(d) { (-3).toSp() },
                         color = Lz.Text,
                     )
-                    Text("Sleep tracker & smart alarm", color = Lz.AccentText, fontSize = with(d) { 42.toSp() }, fontWeight = FontWeight.Medium)
-                    Text("Fully offline · no ads · open source", color = Lz.TextMuted, fontSize = with(d) { 34.toSp() })
+                    Text("Sleep tracker & smart alarm", color = Lz.AccentText, fontSize = with(d) { 40.toSp() }, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
+                    Text("Fully offline · no ads · open source", color = Lz.TextMuted, fontSize = with(d) { 30.toSp() }, maxLines = 1, softWrap = false)
                 }
             }
         }
@@ -338,7 +338,16 @@ class StoreScreenshots {
      */
     private fun save(node: SemanticsNodeInteraction, file: File, w: Int, h: Int) {
         frames(2)
-        val captured = runCatching { node.captureToImage().asAndroidBitmap() }.getOrElse { drawRoot() }
+        // Draw the whole window, then cut out the node (captureToImage is not available under Robolectric).
+        val window = drawRoot()
+        val b = node.fetchSemanticsNode().boundsInWindow
+        val left = b.left.toInt().coerceIn(0, window.width - 1)
+        val top = b.top.toInt().coerceIn(0, window.height - 1)
+        val captured = Bitmap.createBitmap(
+            window, left, top,
+            b.width.toInt().coerceIn(1, window.width - left),
+            b.height.toInt().coerceIn(1, window.height - top),
+        )
         val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         Canvas(bitmap).apply {
             drawColor(0xFF1B2F33.toInt())
@@ -355,7 +364,7 @@ class StoreScreenshots {
         println("Store image: ${file.path} ($w×$h, captured ${captured.width}×${captured.height})")
     }
 
-    /** Fallback capture: draws the activity's view tree into a bitmap. */
+    /** Draws the activity's view tree into a bitmap. */
     private fun drawRoot(): Bitmap {
         val view = compose.activity.window.decorView
         val bmp = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
