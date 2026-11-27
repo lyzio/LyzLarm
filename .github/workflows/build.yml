@@ -26,10 +26,12 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Build debug APK and run unit tests
+      - name: Build debug APK and Play bundle, run unit tests and store screenshots
         run: |
           set -o pipefail
-          ./gradlew assembleDebug testDebugUnitTest :sleep-engine:test --stacktrace 2>&1 | tee build.log
+          # bundleRelease is unsigned here; it only proves the AAB builds (release.yml signs it).
+          ./gradlew assembleDebug bundleRelease testDebugUnitTest :sleep-engine:test --stacktrace 2>&1 | tee build.log
+          ./gradlew -p buildSrc test --stacktrace 2>&1 | tee -a build.log
 
       - name: Report build errors
         if: failure()
@@ -38,6 +40,16 @@ jobs:
           grep -E '^e: ' build.log | head -40 | while IFS= read -r line; do echo "::error::${line}"; done || true
           awk '/What went wrong:/{f=1;n=0} f{print; n++} n>12{f=0}' build.log | head -60 | tr '\n' ' ' | sed 's/^/::error::/' || true
           grep -E 'FAILED|AssertionError|expected:<' build.log | head -20 | while IFS= read -r line; do echo "::error::${line}"; done || true
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-${{ github.sha }}
+          path: |
+            app/build/reports/tests
+            app/build/store-images
+          retention-days: 7
 
       - name: Check the APK has no INTERNET permission
         run: |
@@ -49,6 +61,22 @@ jobs:
             exit 1
           fi
 
+      - name: Check the Play bundle has no INTERNET permission
+        run: |
+          AAB=$(ls app/build/outputs/bundle/release/*.aab | head -1)
+          if unzip -p "$AAB" base/manifest/AndroidManifest.xml | grep -a -q 'android.permission.INTERNET'; then
+            echo "::error::The AAB requests INTERNET permission. Anatole must stay offline."
+            exit 1
+          fi
+          echo "No INTERNET permission in $AAB"
+
+      - name: Upload store images
+        uses: actions/upload-artifact@v4
+        with:
+          name: anatole-store-images-${{ github.sha }}
+          path: app/build/store-images
+          retention-days: 30
+
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
@@ -56,13 +84,20 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 30
 
-      - name: Commit exported database schema
+      - name: Commit exported database schema and store images
         if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/')
         run: |
-          if [ -n "$(git status --porcelain app/schemas)" ]; then
+          # Store images (v0.4) live in the listing folder for Play and F-Droid. They are
+          # rendered with a fixed clock, so they only change when a screen changes.
+          IMG=fastlane/metadata/android/en-US/images
+          mkdir -p "$IMG/phoneScreenshots"
+          cp app/build/store-images/icon.png app/build/store-images/featureGraphic.png "$IMG/"
+          rm -f "$IMG"/phoneScreenshots/*.png
+          cp app/build/store-images/phoneScreenshots/*.png "$IMG/phoneScreenshots/"
+          if [ -n "$(git status --porcelain app/schemas "$IMG")" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add app/schemas
-            git commit -m "Update exported Room schema"
+            git add app/schemas "$IMG"
+            git commit -m "Update exported Room schema and store images"
             git push
           fi

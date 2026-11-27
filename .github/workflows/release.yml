@@ -1,5 +1,15 @@
 name: Release
 
+# Pushing a tag like v0.4.0:
+# 1. builds the APK signed with the app signing key (GitHub Releases, F-Droid),
+# 2. builds the Play bundle (AAB) signed with the upload key,
+# 3. renders the store screenshots from the real screens,
+# 4. creates the GitHub Release with APK, checksum and AAB,
+# 5. uploads the AAB, listing text and images to Google Play's internal test track
+#    (only when the PLAY_SERVICE_ACCOUNT_JSON secret exists, so forks don't fail).
+# Promotion from internal to closed testing or production stays manual in Play Console.
+# One-time setup: docs/release-secrets.md.
+
 on:
   push:
     tags: ["v*"]
@@ -10,6 +20,10 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      play: ${{ steps.secrets.outputs.play }}
+      version: ${{ steps.version.outputs.version }}
+      code: ${{ steps.version.outputs.code }}
     steps:
       - uses: actions/checkout@v5
 
@@ -20,16 +34,46 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Check signing secrets
-        env:
-          KEYSTORE_BASE64: ${{ secrets.LYZLARM_KEYSTORE_BASE64 }}
+      - name: Version from the tag
+        id: version
         run: |
-          if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "::error::Signing secrets are missing. Follow docs/SIGNING.md, then push the tag again."
+          TAG="$GITHUB_REF_NAME"
+          if ! [[ "$TAG" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error::Tag $TAG is not like v0.4.0"
             exit 1
           fi
+          CODE=$(( 10#${BASH_REMATCH[1]} * 10000 + 10#${BASH_REMATCH[2]} * 100 + 10#${BASH_REMATCH[3]} ))
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          echo "Version ${TAG#v}, version code $CODE"
+          if [ ! -f "fastlane/metadata/android/en-US/changelogs/$CODE.txt" ]; then
+            echo "::warning::No fastlane/metadata/android/en-US/changelogs/$CODE.txt: Play gets no release notes."
+          fi
 
-      - name: Build signed release APK
+      - name: Check signing secrets
+        id: secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.LYZLARM_KEYSTORE_BASE64 }}
+          UPLOAD_KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
+          PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::Signing secrets are missing. Follow docs/release-secrets.md, then push the tag again."
+            exit 1
+          fi
+          if [ -n "$UPLOAD_KEYSTORE_BASE64" ]; then echo "upload=true" >> "$GITHUB_OUTPUT"; else
+            echo "::warning::UPLOAD_KEYSTORE_BASE64 is missing: no Play bundle (AAB) this time. See docs/release-secrets.md."
+          fi
+          if [ -n "$UPLOAD_KEYSTORE_BASE64" ] && [ -n "$PLAY_JSON" ]; then echo "play=true" >> "$GITHUB_OUTPUT"; else
+            echo "::notice::No Play upload (needs UPLOAD_KEYSTORE_BASE64 and PLAY_SERVICE_ACCOUNT_JSON)."
+          fi
+
+      - name: Unit tests and store screenshots
+        run: |
+          ./gradlew testDebugUnitTest :sleep-engine:test -PappVersion="$GITHUB_REF_NAME" --stacktrace
+          ./gradlew -p buildSrc test
+
+      - name: Build signed release APK (app signing key)
         env:
           KEYSTORE_BASE64: ${{ secrets.LYZLARM_KEYSTORE_BASE64 }}
           LYZLARM_KEYSTORE_PASSWORD: ${{ secrets.LYZLARM_KEYSTORE_PASSWORD }}
@@ -38,10 +82,25 @@ jobs:
         run: |
           export LYZLARM_KEYSTORE_FILE="$RUNNER_TEMP/release.jks"
           echo "$KEYSTORE_BASE64" | base64 --decode > "$LYZLARM_KEYSTORE_FILE"
-          ./gradlew assembleRelease testDebugUnitTest :sleep-engine:test --stacktrace
+          ./gradlew assembleRelease -PappVersion="$GITHUB_REF_NAME" --stacktrace
+          rm -f "$LYZLARM_KEYSTORE_FILE"
+
+      - name: Build Play bundle (upload key)
+        if: steps.secrets.outputs.upload == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
+          LYZLARM_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
+          LYZLARM_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
+          LYZLARM_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+        run: |
+          export LYZLARM_KEYSTORE_FILE="$RUNNER_TEMP/upload.jks"
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$LYZLARM_KEYSTORE_FILE"
+          ./gradlew bundleRelease -PappVersion="$GITHUB_REF_NAME" --stacktrace
           rm -f "$LYZLARM_KEYSTORE_FILE"
 
       - name: Verify signature and permissions
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
           APK=app/build/outputs/apk/release/app-release.apk
@@ -50,18 +109,81 @@ jobs:
             echo "::error::The APK requests INTERNET permission."
             exit 1
           fi
-          VERSION="${GITHUB_REF_NAME#v}"
+          "$BT/aapt2" dump badging "$APK" | grep -E "^package:" | tee badging.txt
+          grep -q "name='se.lyzio.anatole'" badging.txt || { echo "::error::Wrong package name"; exit 1; }
           cp "$APK" "Anatole-$VERSION.apk"
           sha256sum "Anatole-$VERSION.apk" > "Anatole-$VERSION.apk.sha256"
+          AAB=app/build/outputs/bundle/release/app-release.aab
+          if [ -f "$AAB" ]; then
+            # The bundle manifest is a protobuf; permission names are stored as plain text.
+            if unzip -p "$AAB" base/manifest/AndroidManifest.xml | grep -a -q 'android.permission.INTERNET'; then
+              echo "::error::The AAB requests INTERNET permission."
+              exit 1
+            fi
+            jarsigner -verify "$AAB" | tail -1
+            cp "$AAB" "Anatole-$VERSION.aab"
+          fi
+
+      - name: Copy store screenshots into the listing
+        run: |
+          mkdir -p fastlane/metadata/android/en-US/images/phoneScreenshots
+          cp app/build/store-images/phoneScreenshots/*.png fastlane/metadata/android/en-US/images/phoneScreenshots/
+          ls -l fastlane/metadata/android/en-US/images fastlane/metadata/android/en-US/images/phoneScreenshots
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
           NOTES="docs/release-notes/${GITHUB_REF_NAME}.md"
           if [ -f "$NOTES" ]; then NOTE_ARGS=(--notes-file "$NOTES"); else NOTE_ARGS=(--generate-notes); fi
+          FILES=("Anatole-$VERSION.apk" "Anatole-$VERSION.apk.sha256")
+          if [ -f "Anatole-$VERSION.aab" ]; then FILES+=("Anatole-$VERSION.aab"); fi
           gh release create "$GITHUB_REF_NAME" \
             --title "Anatole $VERSION" \
             "${NOTE_ARGS[@]}" \
-            "Anatole-$VERSION.apk" "Anatole-$VERSION.apk.sha256"
+            "${FILES[@]}"
+
+      - name: Keep the bundle and listing for the Play upload
+        if: steps.secrets.outputs.play == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: play-upload
+          path: |
+            Anatole-${{ steps.version.outputs.version }}.aab
+            fastlane/metadata/android
+          retention-days: 7
+
+  play:
+    needs: release
+    if: needs.release.outputs.play == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: play-upload
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+
+      - name: Install fastlane
+        run: gem install fastlane --no-document
+
+      - name: Upload to Google Play (internal testing)
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          # "completed" rolls the internal release out to testers at once. Set the repository
+          # variable PLAY_RELEASE_STATUS to "draft" while Play still calls the app a draft app.
+          RELEASE_STATUS: ${{ vars.PLAY_RELEASE_STATUS || 'completed' }}
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          fastlane supply \
+            --package_name se.lyzio.anatole \
+            --track internal \
+            --release_status "$RELEASE_STATUS" \
+            --aab "Anatole-$VERSION.aab" \
+            --json_key_data "$PLAY_SERVICE_ACCOUNT_JSON" \
+            --metadata_path fastlane/metadata/android \
+            --sync_image_upload true \
+            --skip_upload_apk true

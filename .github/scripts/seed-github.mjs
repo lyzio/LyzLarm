@@ -35,8 +35,8 @@ const milestones = [
   ["v0.1", "M1 – Reliable alarm: alarms list and editor, setAlarmClock, ringing screen, gradual volume, survives reboot and battery savers.", "closed"],
   ["v0.2", "M2 – Tracking: foreground service, accelerometer batching, epochs saved, basic morning graph with gaps shown.", "open"],
   ["v0.3", "M3 – Smart wake: sleep engine v1, wake window decision with fallback, wake reason shown, out-of-bed detection, Snooze lock. App renamed to Anatole.", "open"],
-  ["v0.4", "M4 – Sound: mic in the last 1–2 hours, sound features in the decision, mic period in the graph.", "open"],
-  ["v0.5", "M5 – Learning and history: morning rating, personal baseline, cycle estimate, trends, export/import.", "open"],
+  ["v0.4", "Play-ready: package se.lyzio.anatole, signed APK + AAB from every tag, Play internal track upload, store listing and images in the repo, privacy policy, night import; fix: tracking follows the next alarm; Bedtime layout. (Sound moved to v0.5, 26 Nov 2026.)", "open"],
+  ["v0.5", "M4 – Sound (moved from v0.4, 26 Nov 2026): mic in the last 1–2 hours, sound in the decision, sound band in the graph. M5 – Learning and history: morning rating, personal baseline, cycle estimate, trends, export/import.", "open"],
   ["v0.6", "M6 – Release: F-Droid packaging, reproducible build, GPL-3.0-or-later.", "open"],
   ["Later", "After v1.0: smart-home build, webhooks/MQTT, snore clips, on-device ML.", "open"],
 ];
@@ -68,12 +68,14 @@ const issues = [
   ["Time to fall asleep", "v0.3", "in progress", "From tracking start to the first stretch accepted as sleep; stored as the night's onset estimate and shown on the Morning screen. Later (v0.5) the usual value is learned."],
   ["Sleep-stage estimate", "v0.3", "in progress", "The Morning screen shows an estimated Awake / Light / Deep curve from movement, labelled as an estimate (decided 25 Nov 2026)."],
   ["Snooze lock", "v0.3", "in progress", "Optional per alarm: snooze and \"I'm up\" need a solved challenge (math, memory, typing; barcode scan optional, codes not reused within 7 days, only a fingerprint stored). Optional stay-awake check rings again if you go back to bed. Moved from v0.5 to v0.3 (25 Nov 2026)."],
-  // v0.4 – Sound
-  ["Sound tracking in the last hours", "v0.4", "planned", "Microphone in the last 1–2 hours, analyzed live; only numbers are saved, nothing is recorded."],
-  ["Sound in the wake decision", "v0.4", "planned", "Rustling and breathing changes count as extra evidence, so less movement is needed when sound agrees."],
-  ["Sound band in the graph", "v0.4", "planned", "The morning graph shows the sound level and the period the microphone was on."],
-  ["Shared bed setting", "v0.4", "planned", "For two sleepers: trigger needs movement and sound to agree, sound tracking at least the last 2 h, placement guidance."],
-  ["Microphone step in setup", "v0.4", "planned", "Setup asks for the microphone and explains it is used only in the last hours and never recorded."],
+  // v0.4 – Google Play (decided 26 Nov 2026)
+  ["Google Play release", "v0.4", "in progress", "Anatole on Google Play: package `se.lyzio.anatole`, signed APK (GitHub) and AAB (Play, upload key) from every `v*` tag, automatic upload to the internal test track, store listing text and images in `fastlane/metadata`, screenshots rendered from the real screens, privacy policy, Play Console answers in `docs/play-console.md`. Then a 12-tester, 14-day closed test before production. Decided 26 Nov 2026."],
+  // v0.5 – Sound (M4, moved from v0.4 on 26 Nov 2026)
+  ["Sound tracking in the last hours", "v0.5", "planned", "Microphone in the last 1–2 hours, analyzed live; only numbers are saved, nothing is recorded."],
+  ["Sound in the wake decision", "v0.5", "planned", "Rustling and breathing changes count as extra evidence, so less movement is needed when sound agrees."],
+  ["Sound band in the graph", "v0.5", "planned", "The morning graph shows the sound level and the period the microphone was on."],
+  ["Shared bed setting", "v0.5", "planned", "For two sleepers: trigger needs movement and sound to agree, sound tracking at least the last 2 h, placement guidance."],
+  ["Microphone step in setup", "v0.5", "planned", "Setup asks for the microphone and explains it is used only in the last hours and never recorded."],
   // v0.5 – Learning and history
   ["Morning rating and feedback tuning", "v0.5", "planned", "Rate how you woke up; rough mornings make the app less eager to fire on that pattern."],
   ["Personal baseline", "v0.5", "planned", "Learns what still and restless mean on your mattress, replacing fixed thresholds."],
