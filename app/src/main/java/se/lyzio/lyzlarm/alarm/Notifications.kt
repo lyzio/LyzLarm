@@ -32,7 +32,7 @@ object Notifications {
             "Sleep tracking",
             NotificationManager.IMPORTANCE_LOW,
         ).apply {
-            description = "Shown while LyzLarm tracks your sleep"
+            description = "Shown while Anatole tracks your sleep"
             setShowBadge(false)
         }
         val bedtime = NotificationChannel(

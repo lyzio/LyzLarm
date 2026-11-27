@@ -91,6 +91,6 @@ private val colors = darkColorScheme(
 )
 
 @Composable
-fun LyzLarmTheme(content: @Composable () -> Unit) {
+fun AnatoleTheme(content: @Composable () -> Unit) {
     MaterialTheme(colorScheme = colors, typography = typography, content = content)
 }

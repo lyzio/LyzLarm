@@ -52,11 +52,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import se.lyzio.lyzlarm.R
 import se.lyzio.lyzlarm.app
 import se.lyzio.lyzlarm.data.EventType
+import se.lyzio.lyzlarm.engine.Sensitivity
+import se.lyzio.lyzlarm.engine.WakeRules
 import se.lyzio.lyzlarm.tracking.Tracker
 import se.lyzio.lyzlarm.tracking.TrackingService
 import se.lyzio.lyzlarm.ui.Format
@@ -73,7 +76,7 @@ private const val HOLD_MS = 1_500L
  * When the night ends (alarm dismissed or stopped), [onFinished] gets the night's id.
  */
 @Composable
-fun BedtimeScreen(onFinished: (Long) -> Unit, onBack: () -> Unit) {
+fun BedtimeScreen(onFinished: (Long) -> Unit, onBack: () -> Unit, startOnOpen: Boolean = false) {
     val context = LocalContext.current
     val app = context.app
     val dao = app.database.nightDao()
@@ -90,7 +93,15 @@ fun BedtimeScreen(onFinished: (Long) -> Unit, onBack: () -> Unit) {
             onFinished(seenNightId)
         }
     }
+    var startFailed by remember { mutableStateOf(false) }
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(Unit) {
+        if (startOnOpen && dao.openNight() == null) {
+            // From the bedtime reminder (#26): start once the screen is really showing.
+            lifecycle.currentStateFlow.first { it.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) }
+            val id = runCatching { Tracker.start(context) }.getOrNull()
+            if (id == null) startFailed = true
+        }
         delay(1_500L)
         loaded = true
     }
@@ -133,6 +144,10 @@ fun BedtimeScreen(onFinished: (Long) -> Unit, onBack: () -> Unit) {
     val events by remember(current?.id) {
         if (current != null) dao.observeEvents(current.id) else kotlinx.coroutines.flow.flowOf(emptyList())
     }.collectAsState(initial = emptyList())
+    val plan by produceState<Tracker.WakePlan?>(null, current?.id, now / 60_000) {
+        value = current?.let { withContext(Dispatchers.IO) { Tracker.wakePlan(context, it) } }
+    }
+    val emptyBedTest by remember { app.database.extrasDao().observeLatestEmptyBedTest() }.collectAsState(initial = null)
     val threshold by produceState(40) { value = app.settings.tracking().warningThreshold }
     val battery = remember(now / 60_000) { Tracker.battery(context) }
 
@@ -158,7 +173,7 @@ fun BedtimeScreen(onFinished: (Long) -> Unit, onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             if (current == null) {
-                if (loaded && seenNightId == 0L) NotTracking(onBack)
+                if (loaded && seenNightId == 0L) NotTracking(onBack, if (startFailed) "No alarm in the next 16 hours. Set an alarm first." else null)
                 return@Column
             }
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -171,12 +186,27 @@ fun BedtimeScreen(onFinished: (Long) -> Unit, onBack: () -> Unit) {
                     letterSpacing = (-3).sp,
                     color = Lz.Text,
                 )
+                val p = plan
+                val ringAt = alarmAt
                 Text(
-                    alarmAt?.let { "Alarm ${Format.time(context, it)}" } ?: "No alarm set",
+                    when {
+                        ringAt == null -> "No alarm set"
+                        p != null && p.isSmart && p.endMs == ringAt ->
+                            "Wake ${Format.time(context, p.startMs)}–${Format.time(context, p.endMs)}"
+                        else -> "Alarm ${Format.time(context, ringAt)}"
+                    },
                     color = Lz.AccentText,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium,
                 )
+                p?.learningNight?.takeIf { p.isSmart }?.let { n ->
+                    Text(
+                        "Learning your sleep · night $n of ${WakeRules.LEARNING_NIGHTS}",
+                        color = Lz.TextMuted,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
             }
 
             val interrupted = !running || events.any { it.type == EventType.TRACKING_INTERRUPTED }
@@ -197,7 +227,24 @@ fun BedtimeScreen(onFinished: (Long) -> Unit, onBack: () -> Unit) {
                     warn = battery < threshold,
                 )
                 HorizontalDivider(color = Lz.Divider)
-                SoonRow(R.drawable.ic_clock, "Smart wake window", "Arrives in v0.3")
+                val p = plan
+                StatusRow(
+                    R.drawable.ic_clock,
+                    "Smart wake window",
+                    when {
+                        p == null -> "Off"
+                        !p.isSmart -> "Off · fixed time"
+                        else -> "${Format.time(context, p.startMs)}–${Format.time(context, p.endMs)} · ${sensitivityLabel(p.sensitivity)}"
+                    },
+                    warn = false,
+                )
+                HorizontalDivider(color = Lz.Divider)
+                StatusRow(
+                    R.drawable.ic_sleep,
+                    "Out of bed",
+                    if (emptyBedTest != null) "Active" else "Run the empty bed test",
+                    warn = emptyBedTest == null,
+                )
                 HorizontalDivider(color = Lz.Divider)
                 SoonRow(R.drawable.ic_volume, "Sound", "Arrives in v0.4")
             }
@@ -222,11 +269,17 @@ fun BedtimeScreen(onFinished: (Long) -> Unit, onBack: () -> Unit) {
     }
 }
 
+fun sensitivityLabel(s: Sensitivity): String = when (s) {
+    Sensitivity.CAUTIOUS -> "Cautious"
+    Sensitivity.BALANCED -> "Balanced"
+    Sensitivity.EAGER -> "Eager"
+}
+
 @Composable
-private fun NotTracking(onBack: () -> Unit) {
+private fun NotTracking(onBack: () -> Unit, reason: String?) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Not tracking", color = Lz.Text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-        Text("No night is being tracked. Use Start sleep on the Alarms tab.", color = Lz.TextMuted, fontSize = 15.sp)
+        Text(reason ?: "No night is being tracked. Use Start sleep on the Alarms tab.", color = Lz.TextMuted, fontSize = 15.sp)
         Text(
             "Back",
             color = Lz.AccentText,

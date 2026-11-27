@@ -10,7 +10,10 @@ import se.lyzio.lyzlarm.data.Alarm
 import se.lyzio.lyzlarm.data.EventRow
 import se.lyzio.lyzlarm.data.EventType
 import se.lyzio.lyzlarm.data.Night
+import se.lyzio.lyzlarm.engine.NightAnalysis
+import se.lyzio.lyzlarm.engine.Sensitivity
 import se.lyzio.lyzlarm.engine.SleepEngine
+import se.lyzio.lyzlarm.engine.WakeRules
 import java.time.ZoneId
 
 /**
@@ -59,6 +62,40 @@ object Tracker {
         return scheduler.snoozedUntil(id) ?: if (alarm.enabled) scheduler.nextRing(alarm) else null
     }
 
+    /**
+     * Tonight's wake plan: window start and end (end = latest wake time) and the sensitivity
+     * used. Null if the alarm will not ring or is snoozed.
+     */
+    data class WakePlan(
+        val alarm: Alarm,
+        val startMs: Long,
+        val endMs: Long,
+        val sensitivity: Sensitivity,
+        /** "night 3 of 7" while learning, else null. */
+        val learningNight: Int?,
+    ) {
+        val isSmart: Boolean get() = alarm.isSmart
+    }
+
+    suspend fun wakePlan(context: Context, night: Night): WakePlan? {
+        val id = night.alarmId ?: return null
+        val alarm = context.app.database.alarmDao().get(id) ?: return null
+        if (!alarm.enabled) return null
+        return wakePlan(context, alarm)
+    }
+
+    suspend fun wakePlan(context: Context, alarm: Alarm, end: Long = context.app.scheduler.nextRing(alarm)): WakePlan {
+        val finished = context.app.database.nightDao().finishedCount()
+        val chosen = context.app.settings.alarmDefaults().sensitivity
+        return WakePlan(
+            alarm = alarm,
+            startMs = WakeRules.windowStart(end, alarm.windowMinutes),
+            endMs = end,
+            sensitivity = WakeRules.effective(chosen, finished),
+            learningNight = WakeRules.learningNight(finished),
+        )
+    }
+
     /** Starts tracking now. Call while the app is in the foreground (button or notification tap). */
     suspend fun start(context: Context): Long? {
         val app = context.app
@@ -87,26 +124,64 @@ object Tracker {
         return id
     }
 
-    /** Stops tracking by hand ("Hold to stop", notification action). */
-    suspend fun stopManually(context: Context) = stop(context, SleepEngine.WakeReason.MANUAL, null)
+    /**
+     * Stops tracking by hand ("Hold to stop", notification action). Before the alarm has
+     * rung this always turns off that morning's alarm (#71, decided 25 Nov 2026): a
+     * repeating alarm moves on to its next day, a one-time alarm is turned off.
+     */
+    suspend fun stopManually(context: Context) {
+        val app = context.app
+        val dao = app.database.nightDao()
+        val night = dao.openNight() ?: return
+        var detail: String? = null
+        val alarm = night.alarmId?.let { app.database.alarmDao().get(it) }
+        if (alarm != null) {
+            val scheduler = app.scheduler
+            val rang = dao.firstEvent(night.id, EventType.RANG) != null
+            scheduler.cancelSnooze(alarm.id)
+            scheduler.cancelEarly(alarm.id)
+            if (!rang && alarm.enabled) {
+                val ringAt = scheduler.nextRing(alarm)
+                if (ringAt - System.currentTimeMillis() <= MAX_AHEAD_MS) {
+                    scheduler.skip(alarm, ringAt)
+                    if (!alarm.isRepeating) app.database.alarmDao().update(alarm.copy(enabled = false))
+                    detail = "alarm_off"
+                    Log.i(TAG, "Stopped before the alarm: ring at $ringAt turned off")
+                }
+            }
+        }
+        stop(context, SleepEngine.WakeReason.MANUAL, detail)
+    }
 
-    suspend fun onAlarmRang(context: Context) = event(context, EventType.RANG, null)
+    /** [detail]: wake reason key, "snooze", "snooze;light_sleep" or "stay_awake". */
+    suspend fun onAlarmRang(context: Context, detail: String?) = event(context, EventType.RANG, detail)
 
     suspend fun onSnoozed(context: Context, minutes: Int) = event(context, EventType.SNOOZED, "$minutes")
 
     /** The alarm was dismissed ("I'm up"): the night ends. [detail] is set when it timed out. */
     suspend fun onAlarmDismissed(context: Context, detail: String? = null) {
         event(context, EventType.DISMISSED, detail)
-        stop(context, SleepEngine.WakeReason.FIXED, detail)
+        stop(context, null, detail)
     }
 
-    private suspend fun event(context: Context, type: String, detail: String?) {
+    /** Dismissed with the stay-awake check on: tracking runs 5 more minutes first. */
+    suspend fun onAlarmDismissedStayAwake(context: Context, alarmId: Long) {
+        event(context, EventType.DISMISSED, null)
+        context.startService(
+            Intent(context, TrackingService::class.java)
+                .setAction(TrackingService.ACTION_STAY_AWAKE)
+                .putExtra(TrackingService.EXTRA_ALARM_ID, alarmId),
+        )
+    }
+
+    suspend fun event(context: Context, type: String, detail: String?, at: Long = System.currentTimeMillis()) {
         val dao = context.app.database.nightDao()
         val night = dao.openNight() ?: return
-        dao.insertEvent(EventRow(nightId = night.id, time = System.currentTimeMillis(), type = type, detail = detail))
+        dao.insertEvent(EventRow(nightId = night.id, time = at, type = type, detail = detail))
     }
 
-    private suspend fun stop(context: Context, reason: SleepEngine.WakeReason, detail: String?) {
+    /** [reason] null = from the night's first ring (see [close]). */
+    private suspend fun stop(context: Context, reason: SleepEngine.WakeReason?, detail: String?) {
         val night = context.app.database.nightDao().openNight() ?: return
         if (TrackingService.running.value) {
             // The service flushes the last sensor data first, then closes the night.
@@ -114,7 +189,7 @@ object Tracker {
             context.startService(
                 Intent(context, TrackingService::class.java)
                     .setAction(TrackingService.ACTION_STOP)
-                    .putExtra(TrackingService.EXTRA_REASON, reason.name)
+                    .putExtra(TrackingService.EXTRA_REASON, reason?.name)
                     .putExtra(TrackingService.EXTRA_DETAIL, detail),
             )
         } else {
@@ -122,8 +197,19 @@ object Tracker {
         }
     }
 
-    /** Writes the end of the night. Called by the service, or directly if it is not running. */
-    suspend fun close(context: Context, night: Night, reason: SleepEngine.WakeReason, at: Long, detail: String?) {
+    /**
+     * Writes the end of the night. Called by the service, or directly if it is not running.
+     * [reason] null = why the alarm first rang tonight (from the first `rang` event), FIXED
+     * if that is unknown. [wakeAt] is when the user got up (the last dismiss); default [at].
+     */
+    suspend fun close(
+        context: Context,
+        night: Night,
+        reason: SleepEngine.WakeReason?,
+        at: Long,
+        detail: String?,
+        wakeAt: Long = at,
+    ) {
         val dao = context.app.database.nightDao()
         val current = dao.night(night.id) ?: return
         if (!current.isOpen) return
@@ -134,10 +220,15 @@ object Tracker {
             return
         }
         val battery = battery(context)
+        val firstRing = dao.firstEvent(current.id, EventType.RANG)
+        val why = reason ?: firstRing?.detail?.split(';')?.firstNotNullOfOrNull { SleepEngine.WakeReason.parse(it) }
+            ?: SleepEngine.WakeReason.FIXED
+        val points = dao.epochs(current.id).map { it.toPoint() }
+        val onset = NightAnalysis.onsetIndex(points)?.let { points[it].timeMs }
         dao.updateNight(
-            current.copy(endTime = at, wakeTime = at, wakeReason = reason.name, batteryEnd = battery),
+            current.copy(endTime = at, wakeTime = wakeAt, wakeReason = why.name, batteryEnd = battery, onsetEstimate = onset),
         )
-        val what = if (reason == SleepEngine.WakeReason.MANUAL) "manual" else "fixed"
+        val what = why.key
         dao.insertEvent(
             EventRow(
                 nightId = night.id,
@@ -148,7 +239,7 @@ object Tracker {
         )
         dao.deleteRawBefore(at - RAW_KEEP_MS)
         Planner.refresh(context)
-        Log.i(TAG, "Night ${night.id} closed ($reason)")
+        Log.i(TAG, "Night ${night.id} closed ($why)")
     }
 
     /**

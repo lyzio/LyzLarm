@@ -51,8 +51,8 @@ jobs:
             exit 1
           fi
           VERSION="${GITHUB_REF_NAME#v}"
-          cp "$APK" "LyzLarm-$VERSION.apk"
-          sha256sum "LyzLarm-$VERSION.apk" > "LyzLarm-$VERSION.apk.sha256"
+          cp "$APK" "Anatole-$VERSION.apk"
+          sha256sum "Anatole-$VERSION.apk" > "Anatole-$VERSION.apk.sha256"
 
       - name: Create GitHub Release
         env:
@@ -62,6 +62,6 @@ jobs:
           NOTES="docs/release-notes/${GITHUB_REF_NAME}.md"
           if [ -f "$NOTES" ]; then NOTE_ARGS=(--notes-file "$NOTES"); else NOTE_ARGS=(--generate-notes); fi
           gh release create "$GITHUB_REF_NAME" \
-            --title "LyzLarm $VERSION" \
+            --title "Anatole $VERSION" \
             "${NOTE_ARGS[@]}" \
-            "LyzLarm-$VERSION.apk" "LyzLarm-$VERSION.apk.sha256"
+            "Anatole-$VERSION.apk" "Anatole-$VERSION.apk.sha256"

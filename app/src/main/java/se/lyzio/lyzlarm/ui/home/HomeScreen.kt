@@ -42,6 +42,8 @@ fun HomeScreen(
     onOpenBedtime: () -> Unit,
     onOpenNight: (Long) -> Unit,
     onOpenTracking: () -> Unit,
+    onOpenAlarmDefaults: () -> Unit,
+    onOpenEmptyBed: () -> Unit,
     initialTab: Int = 0,
 ) {
     var tab by rememberSaveable { mutableIntStateOf(initialTab) }
@@ -50,7 +52,13 @@ fun HomeScreen(
             when (tab) {
                 0 -> AlarmsScreen(onEditAlarm, onStartSleep, onOpenBedtime, onOpenNight)
                 1 -> NightsScreen(onOpenNight)
-                else -> SettingsScreen(onOpenAbout = onOpenAbout, onRunTest = onRunTest, onOpenTracking = onOpenTracking)
+                else -> SettingsScreen(
+                    onOpenAbout = onOpenAbout,
+                    onRunTest = onRunTest,
+                    onOpenTracking = onOpenTracking,
+                    onOpenAlarmDefaults = onOpenAlarmDefaults,
+                    onOpenEmptyBed = onOpenEmptyBed,
+                )
             }
         }
         HorizontalDivider(color = Lz.Divider)

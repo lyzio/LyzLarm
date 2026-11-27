@@ -30,12 +30,14 @@ import se.lyzio.lyzlarm.ui.about.AboutScreen
 import se.lyzio.lyzlarm.ui.about.LicensesScreen
 import se.lyzio.lyzlarm.ui.alarms.EditAlarmScreen
 import se.lyzio.lyzlarm.ui.home.HomeScreen
+import se.lyzio.lyzlarm.ui.settings.AlarmDefaultsScreen
+import se.lyzio.lyzlarm.ui.settings.EmptyBedScreen
 import se.lyzio.lyzlarm.ui.settings.TrackingSettingsScreen
 import se.lyzio.lyzlarm.ui.setup.SetupFlow
 import se.lyzio.lyzlarm.ui.setup.TestAlarmScreen
 import se.lyzio.lyzlarm.ui.sleep.BedtimeScreen
 import se.lyzio.lyzlarm.ui.sleep.MorningScreen
-import se.lyzio.lyzlarm.ui.theme.LyzLarmTheme
+import se.lyzio.lyzlarm.ui.theme.AnatoleTheme
 import se.lyzio.lyzlarm.ui.theme.Lz
 
 class MainActivity : ComponentActivity() {
@@ -50,7 +52,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch { app.scheduler.rescheduleAll() }
         if (savedInstanceState == null) pendingAction.value = intent?.action
         setContent {
-            LyzLarmTheme {
+            AnatoleTheme {
                 Box(Modifier.fillMaxSize().background(Lz.Base)) { AppRoot(pendingAction) }
             }
         }
@@ -108,7 +110,9 @@ private fun MainNav(pendingAction: MutableStateFlow<String?>) {
     val action by pendingAction.collectAsState()
     LaunchedEffect(action) {
         when (action) {
-            MainActivity.ACTION_START_SLEEP -> startSleep()
+            // Bedtime reminder's "Start sleep" (#26): open Bedtime, which starts tracking once
+            // the app is fully in the foreground (Android may refuse the start before that).
+            MainActivity.ACTION_START_SLEEP -> nav.navigate("bedtime?start=true") { launchSingleTop = true }
             MainActivity.ACTION_OPEN_BEDTIME -> nav.navigate("bedtime") { launchSingleTop = true }
             MainActivity.ACTION_OPEN_MORNING -> nav.navigateMorning(0L)
         }
@@ -125,6 +129,8 @@ private fun MainNav(pendingAction: MutableStateFlow<String?>) {
                 onOpenBedtime = { nav.navigate("bedtime") { launchSingleTop = true } },
                 onOpenNight = { id -> nav.navigateMorning(id) },
                 onOpenTracking = { nav.navigate("settings/tracking") },
+                onOpenAlarmDefaults = { nav.navigate("settings/alarm") },
+                onOpenEmptyBed = { nav.navigate("emptybed") },
             )
         }
         composable("nights") {
@@ -136,6 +142,8 @@ private fun MainNav(pendingAction: MutableStateFlow<String?>) {
                 onOpenBedtime = { nav.navigate("bedtime") { launchSingleTop = true } },
                 onOpenNight = { id -> nav.navigateMorning(id) },
                 onOpenTracking = { nav.navigate("settings/tracking") },
+                onOpenAlarmDefaults = { nav.navigate("settings/alarm") },
+                onOpenEmptyBed = { nav.navigate("emptybed") },
                 initialTab = 1,
             )
         }
@@ -148,8 +156,12 @@ private fun MainNav(pendingAction: MutableStateFlow<String?>) {
                 onDone = { nav.popBackStack() },
             )
         }
-        composable("bedtime") {
+        composable(
+            "bedtime?start={start}",
+            arguments = listOf(navArgument("start") { type = NavType.BoolType; defaultValue = false }),
+        ) { entry ->
             BedtimeScreen(
+                startOnOpen = entry.arguments?.getBoolean("start") ?: false,
                 onFinished = { id ->
                     scope.launch {
                         if (context.app.database.nightDao().night(id) != null) {
@@ -161,7 +173,7 @@ private fun MainNav(pendingAction: MutableStateFlow<String?>) {
                         }
                     }
                 },
-                onBack = { nav.popBackStack() },
+                onBack = { if (!nav.popBackStack()) nav.navigate("home") },
             )
         }
         composable(
@@ -177,6 +189,8 @@ private fun MainNav(pendingAction: MutableStateFlow<String?>) {
             )
         }
         composable("settings/tracking") { TrackingSettingsScreen(onBack = { nav.popBackStack() }) }
+        composable("settings/alarm") { AlarmDefaultsScreen(onBack = { nav.popBackStack() }) }
+        composable("emptybed") { EmptyBedScreen(onBack = { nav.popBackStack() }) }
         composable("about") {
             AboutScreen(onBack = { nav.popBackStack() }, onOpenLicenses = { nav.navigate("licenses") })
         }

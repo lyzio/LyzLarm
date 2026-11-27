@@ -64,11 +64,11 @@ object SystemCheck {
 
     /** Extra steps for phone brands known to stop background apps. Null = none needed. */
     fun brandTip(): String? = when (Build.MANUFACTURER.lowercase()) {
-        "samsung" -> "Also add LyzLarm under Settings › Battery › Background usage limits › Never sleeping apps."
-        "xiaomi", "redmi", "poco" -> "Also open Settings › Apps › LyzLarm and set Battery saver to No restrictions, and turn on Autostart."
-        "huawei", "honor" -> "Also open Settings › Battery › App launch, find LyzLarm and set it to Manage manually with all switches on."
-        "oneplus", "oppo", "realme" -> "Also open Settings › Battery › LyzLarm and allow background activity."
-        "vivo" -> "Also allow LyzLarm under Settings › Battery › Background power consumption."
+        "samsung" -> "Also add Anatole under Settings › Battery › Background usage limits › Never sleeping apps."
+        "xiaomi", "redmi", "poco" -> "Also open Settings › Apps › Anatole and set Battery saver to No restrictions, and turn on Autostart."
+        "huawei", "honor" -> "Also open Settings › Battery › App launch, find Anatole and set it to Manage manually with all switches on."
+        "oneplus", "oppo", "realme" -> "Also open Settings › Battery › Anatole and allow background activity."
+        "vivo" -> "Also allow Anatole under Settings › Battery › Background power consumption."
         else -> null
     }
 }

@@ -1,17 +1,17 @@
-// Builds the static LyzLarm website into site/dist/.
+// Builds the static Anatole website into site/dist/.
 //
 // Runs in GitHub Actions. It fetches the latest release and the issues labeled "roadmap"
 // from the GitHub API at build time, so visitors' browsers never contact GitHub's API.
 // No dependencies: plain Node 20+.
 //
-//   GITHUB_TOKEN=... GITHUB_REPOSITORY=lyzio/LyzLarm node site/build.mjs
+//   GITHUB_TOKEN=... GITHUB_REPOSITORY=lyzio/Anatole node site/build.mjs
 
 import { mkdir, readFile, writeFile, cp } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const repo = process.env.GITHUB_REPOSITORY || "lyzio/LyzLarm";
+const repo = process.env.GITHUB_REPOSITORY || "lyzio/Anatole";
 const repoUrl = `https://github.com/${repo}`;
 const token = process.env.GITHUB_TOKEN;
 
@@ -86,7 +86,7 @@ async function main() {
           <div class="eyebrow">Latest release</div>
           <h2 class="h2s">Coming soon</h2>
           <p class="soft">The first release is being prepared. Follow progress on GitHub.</p>
-          <a class="link-row" href="${repoUrl}">github.com/lyzio/LyzLarm</a>`;
+          <a class="link-row" href="${repoUrl}">github.com/lyzio/Anatole</a>`;
   }
 
   // ---- Features: "Available" once the latest release has reached that version.

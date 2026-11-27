@@ -132,7 +132,7 @@ private fun WelcomeStep(onNext: () -> Unit) {
         step = 1,
         content = {
             LogoBadge()
-            SetupTitle("Welcome to LyzLarm")
+            SetupTitle("Welcome to Anatole")
             SetupBody("Wakes you gently at your lightest sleep. Fully offline: no internet access, no accounts, no tracking.")
             Feature(R.drawable.ic_clock, "Smart wake window.", "Rings at light sleep, never after your latest time. Arrives in v0.3.")
             Feature(R.drawable.ic_sleep, "Sleep graph every morning.", "See how much you moved and when, every morning.")
@@ -166,7 +166,7 @@ private fun NotificationsStep(onNext: () -> Unit) {
         content = {
             IconBadge(R.drawable.ic_bell)
             SetupTitle("Allow notifications")
-            SetupBody("LyzLarm needs notifications to ring the alarm, and shows one quiet notification while it tracks your sleep.")
+            SetupBody("Anatole needs notifications to ring the alarm, and shows one quiet notification while it tracks your sleep.")
             LzCard(color = Lz.Surface) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     LzIcon(
@@ -209,7 +209,7 @@ private fun AlarmsStep(onNext: () -> Unit) {
         content = {
             IconBadge(R.drawable.ic_clock)
             SetupTitle("Let alarms ring on time")
-            SetupBody("Allows LyzLarm to ring at the exact minute and to show the alarm over your lock screen.")
+            SetupBody("Allows Anatole to ring at the exact minute and to show the alarm over your lock screen.")
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Lz.Surface)) {
                 PermissionRow(R.drawable.ic_alarm, "Exact alarms", status.exactAlarms, divider = true) {
                     context.startSafely(SystemCheck.exactAlarmIntent(context))
@@ -234,9 +234,9 @@ private fun BatteryStep(onNext: () -> Unit) {
         step = 4,
         content = {
             IconBadge(R.drawable.ic_battery)
-            SetupTitle("Keep LyzLarm awake at night")
+            SetupTitle("Keep Anatole awake at night")
             SetupBody(
-                "Android may pause apps to save battery. For tracking to run all night, allow LyzLarm to run " +
+                "Android may pause apps to save battery. For tracking to run all night, allow Anatole to run " +
                     "without battery restrictions. The alarm itself always rings either way.",
             )
             if (tip != null) {

@@ -71,6 +71,20 @@ object Planner {
         am.cancel(pending(context, BedtimeReceiver.ACTION_BATTERY_WARNING))
     }
 
+    /** Wakes the tracking service shortly before the wake window opens. */
+    fun scheduleListen(context: Context, at: Long) = set(context, at, BedtimeReceiver.ACTION_LISTEN)
+
+    fun cancelListen(context: Context) {
+        context.getSystemService(AlarmManager::class.java).cancel(pending(context, BedtimeReceiver.ACTION_LISTEN))
+    }
+
+    /** Backup for the stay-awake check, in case no epoch arrives to trigger it. */
+    fun scheduleStayAwakeCheck(context: Context, at: Long) = set(context, at, BedtimeReceiver.ACTION_STAY_AWAKE_CHECK)
+
+    fun cancelStayAwakeCheck(context: Context) {
+        context.getSystemService(AlarmManager::class.java).cancel(pending(context, BedtimeReceiver.ACTION_STAY_AWAKE_CHECK))
+    }
+
     fun scheduleWatchdog(context: Context) {
         set(context, System.currentTimeMillis() + WATCHDOG_MS, BedtimeReceiver.ACTION_WATCHDOG)
     }

@@ -39,8 +39,8 @@ import se.lyzio.lyzlarm.ui.setup.startSafely
 import se.lyzio.lyzlarm.ui.theme.Lz
 import se.lyzio.lyzlarm.ui.theme.SpaceGrotesk
 
-const val SOURCE_URL = "https://github.com/lyzio/LyzLarm"
-const val WEBSITE_URL = "https://lyzio.github.io/LyzLarm"
+const val SOURCE_URL = "https://github.com/lyzio/Anatole"
+const val WEBSITE_URL = "https://lyzio.github.io/Anatole"
 
 @Composable
 fun BackHeader(title: String, onBack: () -> Unit) {
@@ -71,8 +71,23 @@ fun AboutScreen(onBack: () -> Unit, onOpenLicenses: () -> Unit) {
         ) {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 LogoBadge()
-                Text("LyzLarm", fontFamily = SpaceGrotesk, fontWeight = FontWeight.SemiBold, fontSize = 28.sp, color = Lz.Text)
+                Text("Anatole", fontFamily = SpaceGrotesk, fontWeight = FontWeight.SemiBold, fontSize = 28.sp, color = Lz.Text)
+                Text("Sleep tracker & alarm", color = Lz.TextSoft, fontSize = 15.sp)
                 Text("Version ${BuildConfig.VERSION_NAME}", color = Lz.TextMuted, fontSize = 14.sp)
+            }
+            Column(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Lz.Surface).padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text("The name", color = Lz.Text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "In Greek myth, Anatole is the goddess of sunrise, one of the Horai, the goddesses of the hours. " +
+                        "She brings the first light of the day, and this app tries to do the same: wake you gently, " +
+                        "at the right hour. The logo is the moon holding a small rising sun.",
+                    color = Lz.TextSoft,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                )
             }
             Column(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Lz.Surface).padding(16.dp),
@@ -80,7 +95,7 @@ fun AboutScreen(onBack: () -> Unit, onOpenLicenses: () -> Unit) {
             ) {
                 Text("Privacy", color = Lz.Text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 Text(
-                    "LyzLarm has no internet permission. It collects nothing, has no accounts and no ads. " +
+                    "Anatole has no internet permission. It collects nothing, has no accounts and no ads. " +
                         "Your sleep data never leaves this phone unless you export it.",
                     color = Lz.TextSoft,
                     fontSize = 14.sp,
@@ -88,8 +103,8 @@ fun AboutScreen(onBack: () -> Unit, onOpenLicenses: () -> Unit) {
                 )
             }
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Lz.Surface)) {
-                LinkRow("Source code", "github.com/lyzio/LyzLarm", divider = true) { open(SOURCE_URL) }
-                LinkRow("Website", "lyzio.github.io/LyzLarm", divider = true) { open(WEBSITE_URL) }
+                LinkRow("Source code", "github.com/lyzio/Anatole", divider = true) { open(SOURCE_URL) }
+                LinkRow("Website", "lyzio.github.io/Anatole", divider = true) { open(WEBSITE_URL) }
                 LinkRow("License", "GPL-3.0-or-later", divider = true) { open("$SOURCE_URL/blob/master/LICENSE") }
                 LinkRow("Open-source licenses", "Fonts, libraries", divider = false, onClick = onOpenLicenses)
             }

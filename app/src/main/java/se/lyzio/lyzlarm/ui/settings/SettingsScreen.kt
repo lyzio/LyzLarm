@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import se.lyzio.lyzlarm.R
 import se.lyzio.lyzlarm.app
 import se.lyzio.lyzlarm.system.SystemCheck
+import kotlinx.coroutines.launch
 import se.lyzio.lyzlarm.ui.components.LzIcon
 import se.lyzio.lyzlarm.ui.setup.rememberSystemStatus
 import se.lyzio.lyzlarm.ui.setup.startSafely
@@ -40,10 +41,17 @@ import se.lyzio.lyzlarm.ui.theme.SpaceGrotesk
 import java.text.DateFormat
 import java.util.Date
 
-/** Settings: System check, Tracking (v0.2) and About. Other groups arrive with their features. */
+/** Settings: System check, Alarm defaults (v0.3), Tracking (v0.2) and About. */
 @Composable
-fun SettingsScreen(onOpenAbout: () -> Unit, onRunTest: () -> Unit, onOpenTracking: () -> Unit) {
+fun SettingsScreen(
+    onOpenAbout: () -> Unit,
+    onRunTest: () -> Unit,
+    onOpenTracking: () -> Unit,
+    onOpenAlarmDefaults: () -> Unit,
+    onOpenEmptyBed: () -> Unit,
+) {
     val context = LocalContext.current
+    val emptyBed by context.app.database.extrasDao().observeLatestEmptyBedTest().collectAsState(initial = null)
     val status = rememberSystemStatus()
     val testPassedAt by context.app.settings.testAlarmPassedAt.collectAsState(initial = 0L)
     val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -89,9 +97,34 @@ fun SettingsScreen(onOpenAbout: () -> Unit, onRunTest: () -> Unit, onOpenTrackin
                         "Last passed " + DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(testPassedAt))
                     } else "Rings in one minute",
                     action = "Run test",
-                    divider = false,
+                    divider = true,
                     onClick = onRunTest,
                 )
+                val bed = emptyBed
+                SettingsRow(
+                    icon = R.drawable.ic_sleep,
+                    title = "Empty bed test (10 min)",
+                    subtitle = if (bed != null) {
+                        "Last run " + DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(bed.startTime))
+                    } else "Needed for out-of-bed detection",
+                    action = "Run",
+                    actionColor = if (bed != null) Lz.AccentText else Lz.Warning,
+                    divider = bed != null,
+                    onClick = onOpenEmptyBed,
+                )
+                if (bed != null) {
+                    SettingsRow(
+                        icon = R.drawable.ic_export,
+                        title = "Export empty bed test (CSV)",
+                        subtitle = null,
+                        action = "Export",
+                        divider = false,
+                        onClick = {
+                            val appContext = context.applicationContext
+                            context.app.scope.launch { EmptyBedExport.share(appContext) }
+                        },
+                    )
+                }
             }
             SystemCheck.brandTip()?.takeIf { !status.batteryUnrestricted }?.let { tip ->
                 Text("${SystemCheck.brand()}: $tip", color = Lz.TextMuted, fontSize = 13.sp, lineHeight = 19.sp)
@@ -99,6 +132,14 @@ fun SettingsScreen(onOpenAbout: () -> Unit, onRunTest: () -> Unit, onOpenTrackin
         }
 
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Lz.Surface)) {
+            SettingsRow(
+                icon = R.drawable.ic_alarm,
+                title = "Alarm defaults",
+                subtitle = "Wake window, sensitivity, snooze",
+                action = null,
+                divider = true,
+                onClick = onOpenAlarmDefaults,
+            )
             SettingsRow(
                 icon = R.drawable.ic_moon,
                 title = "Tracking",
