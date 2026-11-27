@@ -30,6 +30,8 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.printToString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -144,7 +146,7 @@ class StoreScreenshots {
         settle("Feature graphic") { text("Anatole") }
         save(compose.onNodeWithTag(FEATURE), File(out, "featureGraphic.png"), 1024, 500)
 
-        shot(Screen.ALARMS, "1_alarms") { text("Start sleep") && text("Last night") }
+        shot(Screen.ALARMS, "1_alarms") { text("Start sleep") && text("smart wake") }
         shot(Screen.EDIT, "2_edit_alarm") { text("Edit alarm") && text("Rings between") }
         runBlocking { openTonight(ids.alarm) }
         TrackingService._running.value = true
@@ -310,7 +312,9 @@ class StoreScreenshots {
             }
             Thread.sleep(50)
         }
-        error("$what did not appear")
+        val tree = runCatching { compose.onRoot(useUnmergedTree = true).printToString(maxDepth = 30) }.getOrElse { it.toString() }
+        runCatching { save(compose.onRoot(), File(out, "failed-$what.png".replace(' ', '_')), 1080, 1920) }
+        error("$what did not appear. Screen now:\n$tree")
     }
 
     private fun frames(n: Int) {

@@ -41,6 +41,16 @@ jobs:
           awk '/What went wrong:/{f=1;n=0} f{print; n++} n>12{f=0}' build.log | head -60 | tr '\n' ' ' | sed 's/^/::error::/' || true
           grep -E 'FAILED|AssertionError|expected:<' build.log | head -20 | while IFS= read -r line; do echo "::error::${line}"; done || true
 
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-${{ github.sha }}
+          path: |
+            app/build/reports/tests
+            app/build/store-images
+          retention-days: 7
+
       - name: Check the APK has no INTERNET permission
         run: |
           AAPT2=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)

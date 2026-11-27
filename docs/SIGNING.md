@@ -1,5 +1,9 @@
 # Release signing: one-time setup
 
+> **v0.4:** releases now also build a Google Play bundle with a separate upload key. The app
+> signing key below stays the same. See [release-secrets.md](release-secrets.md) for the
+> upload key, Play and the service account.
+
 Release APKs are signed with one key. Android only installs an update if it is signed
 with the same key as the installed app, so **losing this key means existing installs can
 never be updated**. Keep the keystore file and its passwords backed up offline (for
@@ -64,4 +68,4 @@ Release with `LyzLarm-0.1.0.apk` attached. The website updates itself after that
 ## Note on debug vs release
 
 Debug APKs from every push install as a separate app (**Anatole** with package
-`se.lyzio.lyzlarm.debug`), so you can test builds without touching your real alarms.
+`se.lyzio.anatole.debug`; up to v0.3 it was `se.lyzio.lyzlarm.debug`), so you can test builds without touching your real alarms.
