@@ -26,10 +26,12 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Build debug APK and run unit tests
+      - name: Build debug APK and Play bundle, run unit tests and store screenshots
         run: |
           set -o pipefail
-          ./gradlew assembleDebug testDebugUnitTest :sleep-engine:test --stacktrace 2>&1 | tee build.log
+          # bundleRelease is unsigned here; it only proves the AAB builds (release.yml signs it).
+          ./gradlew assembleDebug bundleRelease testDebugUnitTest :sleep-engine:test --stacktrace 2>&1 | tee build.log
+          ./gradlew -p buildSrc test --stacktrace 2>&1 | tee -a build.log
 
       - name: Report build errors
         if: failure()
@@ -48,6 +50,22 @@ jobs:
             echo "::error::The APK requests INTERNET permission. Anatole must stay offline."
             exit 1
           fi
+
+      - name: Check the Play bundle has no INTERNET permission
+        run: |
+          AAB=$(ls app/build/outputs/bundle/release/*.aab | head -1)
+          if unzip -p "$AAB" base/manifest/AndroidManifest.xml | grep -a -q 'android.permission.INTERNET'; then
+            echo "::error::The AAB requests INTERNET permission. Anatole must stay offline."
+            exit 1
+          fi
+          echo "No INTERNET permission in $AAB"
+
+      - name: Upload store images
+        uses: actions/upload-artifact@v4
+        with:
+          name: anatole-store-images-${{ github.sha }}
+          path: app/build/store-images
+          retention-days: 30
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4

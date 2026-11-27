@@ -7,18 +7,24 @@ plugins {
 
 // Release signing comes from environment variables set by the release workflow
 // (from GitHub Secrets). The keystore itself is never committed.
+// The same variables sign the APK (app signing key) and, in a second Gradle run, the
+// Play bundle (upload key); see .github/workflows/release.yml.
 val releaseKeystore = System.getenv("LYZLARM_KEYSTORE_FILE")
 
+// Version: from the release tag (-PappVersion=v0.4.0), else gradle.properties.
+// Version code = major*10000 + minor*100 + patch (0.4.0 -> 400); see buildSrc/AppVersion.kt.
+val appVersion = (findProperty("appVersion") as String?) ?: (findProperty("anatole.version") as String)
+
 android {
-    namespace = "se.lyzio.lyzlarm"
+    namespace = "se.lyzio.anatole"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "se.lyzio.lyzlarm"
+        applicationId = "se.lyzio.anatole"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.3.0"
+        versionCode = AppVersion.code(appVersion)
+        versionName = AppVersion.name(appVersion)
     }
 
     signingConfigs {
@@ -119,4 +125,9 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.test.junit)
     testImplementation(libs.room.testing)
+
+    // Store screenshots (v0.4): real screens rendered on the JVM by Robolectric.
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
+    debugImplementation(libs.compose.ui.test.manifest)
 }

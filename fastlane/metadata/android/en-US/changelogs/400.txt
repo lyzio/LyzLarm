@@ -1,0 +1,1 @@
+Anatole now has its own package name, so this version installs as a new app: export your nights as CSV first, then import them in Settings › Data. The night now follows your next alarm when you change alarms after Start sleep. Bedtime screen layout fixed for small screens. First release on Google Play.
