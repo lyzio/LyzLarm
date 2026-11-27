@@ -9,10 +9,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import se.lyzio.lyzlarm.app
+import se.lyzio.lyzlarm.tracking.Planner
+import se.lyzio.lyzlarm.tracking.Tracker
 
 /**
  * Re-arms all alarms after a restart, an app update, a clock or time-zone change,
- * or when the exact-alarm permission is granted again.
+ * or when the exact-alarm permission is granted again. Also resumes an open night's
+ * tracking after a restart and re-plans the bedtime reminder.
  */
 class RescheduleReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -21,6 +24,12 @@ class RescheduleReceiver : BroadcastReceiver() {
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
                 context.app.scheduler.rescheduleAll()
+                // After a restart or app update: continue an open night (boot and update
+                // broadcasts may start a foreground service; the others may not).
+                if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
+                    Tracker.resumeIfNeeded(context)
+                }
+                Planner.refresh(context)
             } finally {
                 pending.finish()
             }

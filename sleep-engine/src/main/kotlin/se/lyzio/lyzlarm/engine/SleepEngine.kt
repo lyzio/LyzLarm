@@ -1,17 +1,22 @@
 package se.lyzio.lyzlarm.engine
 
 /**
- * Pure-Kotlin sleep engine: activity scores, sleep curve, wake decision and learning.
+ * Pure-Kotlin sleep engine: movement scores, tracking gaps, bedtime learning, and
+ * (from v0.3) the sleep curve and wake decision.
  *
- * v0.1 has no tracking, so the only decision is the fallback: ring at the latest wake time.
- * Tracking arrives in v0.2 and the smart wake decision in v0.3.
+ * v0.2 records movement but makes no smart-wake decision yet: alarms ring at the
+ * latest wake time ([WakeReason.FIXED]) or tracking is stopped by hand ([WakeReason.MANUAL]).
  */
 object SleepEngine {
-    const val VERSION = 1
+    /** Stored per night, so later versions know which engine produced the data. */
+    const val VERSION = 2
 
-    /** Why an alarm fired. Stored per night from v0.2 on. */
+    /** Length of one epoch, the unit the movement score is computed for. */
+    const val EPOCH_MS = 30_000L
+
+    /** Why a night ended. Stored per night. */
     enum class WakeReason { LIGHT_SLEEP, WINDOW_END, FIXED, MANUAL }
 
-    /** In v0.1 every alarm is a fixed-time alarm. */
+    /** In v0.2 every alarm is a fixed-time alarm. */
     fun decideWithoutTracking(): WakeReason = WakeReason.FIXED
 }

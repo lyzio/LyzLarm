@@ -8,5 +8,7 @@ captures/
 .kotlin/
 *.jks
 *.keystore
+# Shared test-only key so debug builds from any CI run can update each other.
+!app/debug.keystore
 site/dist/
 site/node_modules/

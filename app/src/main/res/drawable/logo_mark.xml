@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Logo C in full color for in-app use (welcome, About), on the #0F1C1F logo background. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="72dp"
+    android:height="72dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+    <group android:translateX="1" android:translateY="0.5">
+        <path
+            android:fillColor="#EEF3F3"
+            android:pathData="M57.354,28.027 A34,34 0 0,0 29.162,82.874 A34,34 0 0,0 89.261,69.050 A26,26 0 0,1 53.477,63.962 A26,26 0 0,1 57.354,28.027 Z" />
+        <path
+            android:fillColor="#ED4C67"
+            android:pathData="M74,48m-11,0a11,11 0,1 1,22 0a11,11 0,1 1,-22 0" />
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#ED4C67"
+            android:strokeWidth="4"
+            android:strokeLineCap="round"
+            android:pathData="M74,28L74,23M91,48L96,48M86,36L90,32M86,60L90,64" />
+    </group>
+</vector>

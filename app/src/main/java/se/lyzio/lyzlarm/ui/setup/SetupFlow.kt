@@ -43,6 +43,7 @@ import se.lyzio.lyzlarm.R
 import se.lyzio.lyzlarm.system.SystemCheck
 import se.lyzio.lyzlarm.system.SystemStatus
 import se.lyzio.lyzlarm.ui.components.IconBadge
+import se.lyzio.lyzlarm.ui.components.LogoBadge
 import se.lyzio.lyzlarm.ui.components.LzCard
 import se.lyzio.lyzlarm.ui.components.LzIcon
 import se.lyzio.lyzlarm.ui.components.PrimaryButton
@@ -130,11 +131,11 @@ private fun WelcomeStep(onNext: () -> Unit) {
     SetupScaffold(
         step = 1,
         content = {
-            IconBadge(R.drawable.ic_alarm, background = Lz.Accent, tint = Lz.OnAccent)
+            LogoBadge()
             SetupTitle("Welcome to LyzLarm")
             SetupBody("Wakes you gently at your lightest sleep. Fully offline: no internet access, no accounts, no tracking.")
             Feature(R.drawable.ic_clock, "Smart wake window.", "Rings at light sleep, never after your latest time. Arrives in v0.3.")
-            Feature(R.drawable.ic_sleep, "Sleep graph every morning.", "See what the app measured and why it woke you. Arrives in v0.2.")
+            Feature(R.drawable.ic_sleep, "Sleep graph every morning.", "See how much you moved and when, every morning.")
             Feature(R.drawable.ic_shield, "Your data stays here.", "Everything is stored only on this phone.")
         },
         actions = { PrimaryButton("Get started", onNext) },

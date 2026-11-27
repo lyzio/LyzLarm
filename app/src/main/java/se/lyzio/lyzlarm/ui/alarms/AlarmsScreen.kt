@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,6 +22,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -40,6 +42,9 @@ import se.lyzio.lyzlarm.R
 import se.lyzio.lyzlarm.alarm.NextAlarm
 import se.lyzio.lyzlarm.app
 import se.lyzio.lyzlarm.data.Alarm
+import se.lyzio.lyzlarm.tracking.NightStats
+import se.lyzio.lyzlarm.tracking.NightSummary
+import se.lyzio.lyzlarm.tracking.Tracker
 import se.lyzio.lyzlarm.ui.Format
 import se.lyzio.lyzlarm.ui.components.LzIcon
 import se.lyzio.lyzlarm.ui.components.LzSwitch
@@ -47,10 +52,20 @@ import se.lyzio.lyzlarm.ui.theme.Lz
 import se.lyzio.lyzlarm.ui.theme.SpaceGrotesk
 
 @Composable
-fun AlarmsScreen(onEditAlarm: (Long) -> Unit) {
+fun AlarmsScreen(
+    onEditAlarm: (Long) -> Unit,
+    onStartSleep: () -> Unit,
+    onOpenBedtime: () -> Unit,
+    onOpenMorning: (Long) -> Unit,
+) {
     val context = LocalContext.current
     val container = context.app
     val alarms by remember { container.database.alarmDao().observeAll() }.collectAsState(initial = null)
+    val openNight by remember { container.database.nightDao().observeOpenNight() }.collectAsState(initial = null)
+    val lastNight by remember { container.database.nightDao().observeLatestFinished() }.collectAsState(initial = null)
+    val lastSummary by produceState<NightSummary?>(null, lastNight) {
+        value = lastNight?.let { withContext(Dispatchers.IO) { NightStats.summary(context, it) } }
+    }
     val scope = rememberCoroutineScope()
 
     // Refresh the countdown every 30 seconds.
@@ -81,7 +96,7 @@ fun AlarmsScreen(onEditAlarm: (Long) -> Unit) {
         }
 
         val list = alarms ?: return@Column
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxSize()) {
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.weight(1f).fillMaxWidth()) {
             item { NextWakeCard(list, now) }
             if (list.isEmpty()) {
                 item {
@@ -107,8 +122,97 @@ fun AlarmsScreen(onEditAlarm: (Long) -> Unit) {
                     },
                 )
             }
-            item { Box(Modifier.padding(bottom = 16.dp)) }
+            lastSummary?.let { summary ->
+                item(key = "last-night") { LastNightCard(summary) { onOpenMorning(summary.night.id) } }
+            }
+            item { Box(Modifier.padding(bottom = 8.dp)) }
         }
+        StartSleep(list, now, tracking = openNight != null, onStart = onStartSleep, onOpenBedtime = onOpenBedtime)
+    }
+}
+
+/** Big "Start sleep" button above the bottom nav. Needs an alarm within the next 16 h. */
+@Composable
+private fun StartSleep(alarms: List<Alarm>, now: Long, tracking: Boolean, onStart: () -> Unit, onOpenBedtime: () -> Unit) {
+    val context = LocalContext.current
+    val scheduler = context.app.scheduler
+    val next = alarms
+        .filter { it.enabled || scheduler.snoozedUntil(it.id) != null }
+        .minOfOrNull { scheduler.snoozedUntil(it.id) ?: scheduler.nextRing(it) }
+        ?.takeIf { it - now <= Tracker.MAX_AHEAD_MS }
+    Column(
+        Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        val enabled = tracking || next != null
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(60.dp)
+                .clip(RoundedCornerShape(30.dp))
+                .background(if (enabled) Lz.Accent else Lz.SurfaceDim)
+                .clickable(enabled = enabled, role = Role.Button) { if (tracking) onOpenBedtime() else onStart() },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            LzIcon(R.drawable.ic_moon, null, tint = if (enabled) Lz.OnAccent else Lz.TextDim, size = 22.dp)
+            Text(
+                if (tracking) "Tracking your sleep" else "Start sleep",
+                color = if (enabled) Lz.OnAccent else Lz.TextDim,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(start = 10.dp),
+            )
+        }
+        Text(
+            when {
+                tracking -> "Tap to open the bedtime screen"
+                next != null -> "Tracks until the ${Format.time(context, next)} alarm"
+                else -> "Set an alarm first"
+            },
+            color = Lz.TextMuted,
+            fontSize = 13.sp,
+        )
+    }
+}
+
+/** "Last night" summary card; opens the morning screen. */
+@Composable
+private fun LastNightCard(summary: NightSummary, onClick: () -> Unit) {
+    val context = LocalContext.current
+    val night = summary.night
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Lz.Surface)
+            .clickable(onClick = onClick, onClickLabel = "Open last night")
+            .padding(horizontal = 18.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Last night", color = Lz.TextMuted, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            LzIcon(R.drawable.ic_chevron, null, tint = Lz.TextMuted, size = 18.dp)
+        }
+        Text(
+            Format.measured(summary.trackedMs) + " tracked",
+            fontFamily = SpaceGrotesk,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 22.sp,
+            color = Lz.Text,
+        )
+        val gaps = summary.gaps.size
+        Text(
+            "${Format.time(context, night.startTime)} – ${Format.time(context, summary.endOrNow)} · " +
+                when (gaps) {
+                    0 -> "no gaps"
+                    1 -> "1 gap"
+                    else -> "$gaps gaps"
+                },
+            color = if (gaps > 0) Lz.Warning else Lz.TextMuted,
+            fontSize = 13.sp,
+        )
     }
 }
 
@@ -139,7 +243,7 @@ private fun NextWakeCard(alarms: List<Alarm>, now: Long) {
             val (alarm, ringAt) = next
             val snoozed = scheduler.snoozedUntil(alarm.id) != null
             Text(
-                "Next wake-up · in ${Format.duration(ringAt - now)}",
+                "Next alarm · in ${Format.duration(ringAt - now)}",
                 color = Lz.HighlightText,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
@@ -153,7 +257,7 @@ private fun NextWakeCard(alarms: List<Alarm>, now: Long) {
                 color = androidx.compose.ui.graphics.Color.White,
             )
             Text(
-                if (snoozed) "Snoozed" else "Rings at exactly this time · smart wake arrives in v0.3",
+                if (snoozed) "Snoozed" else "Fixed time · smart wake arrives in v0.3",
                 color = Lz.HighlightSoft,
                 fontSize = 14.sp,
             )

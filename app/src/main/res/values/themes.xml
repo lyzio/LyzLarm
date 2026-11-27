@@ -7,4 +7,5 @@
     </style>
     <color name="base">#1B2F33</color>
     <color name="accent">#ED4C67</color>
+    <color name="logo_background">#0F1C1F</color>
 </resources>

@@ -32,6 +32,37 @@ object Format {
         }.joinToString(" ")
     }
 
+    /** "7 h 12 min" but rounded down, for measured durations. */
+    fun measured(millis: Long): String {
+        val total = (millis.coerceAtLeast(0) / 60_000)
+        val h = total / 60
+        val m = total % 60
+        return when {
+            h == 0L -> "$m min"
+            m == 0L -> "$h h"
+            else -> "$h h $m min"
+        }
+    }
+
+    /** "Thu 19 → Fri 20 Nov" for a night; same day: "Thu 19 Nov". */
+    fun nightRange(startMillis: Long, endMillis: Long): String {
+        val z = java.time.ZoneId.systemDefault()
+        val a = java.time.Instant.ofEpochMilli(startMillis).atZone(z)
+        val b = java.time.Instant.ofEpochMilli(endMillis).atZone(z)
+        val day = java.time.format.DateTimeFormatter.ofPattern("EEE d", java.util.Locale.getDefault())
+        val month = java.time.format.DateTimeFormatter.ofPattern("MMM", java.util.Locale.getDefault())
+        return if (a.toLocalDate() == b.toLocalDate()) {
+            "${day.format(a)} ${month.format(a)}"
+        } else if (a.month == b.month) {
+            "${day.format(a)} → ${day.format(b)} ${month.format(b)}"
+        } else {
+            "${day.format(a)} ${month.format(a)} → ${day.format(b)} ${month.format(b)}"
+        }
+    }
+
+    /** Minutes after midnight as a clock time. */
+    fun minuteOfDay(context: Context, minute: Int): String = time(context, minute / 60, minute % 60)
+
     /** "0:47" countdown. */
     fun countdown(millis: Long): String {
         val s = (millis.coerceAtLeast(0) + 999) / 1000

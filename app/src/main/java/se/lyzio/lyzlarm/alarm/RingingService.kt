@@ -32,6 +32,8 @@ import kotlinx.coroutines.withContext
 import se.lyzio.lyzlarm.R
 import se.lyzio.lyzlarm.app
 import se.lyzio.lyzlarm.data.Alarm
+import se.lyzio.lyzlarm.tracking.Planner
+import se.lyzio.lyzlarm.tracking.Tracker
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -105,6 +107,13 @@ class RingingService : Service() {
                 ),
             )
             goForeground(label, now, alarm.snoozeMinutes)
+            if (!isTest) {
+                val context = applicationContext
+                CoroutineScope(Dispatchers.IO).launch {
+                    Tracker.onAlarmRang(context)
+                    Planner.refresh(context)
+                }
+            }
             ring(alarm, isTest)
         }
     }
@@ -155,6 +164,7 @@ class RingingService : Service() {
             RingingState.update { it.copy(volume = fraction) }
             if (System.currentTimeMillis() > endAt) {
                 Log.i(TAG, "Alarm rang for ${MAX_RING_MS / 60_000} min without response; stopping")
+                endTracking(detail = "no response")
                 finish()
                 return
             }
@@ -215,6 +225,8 @@ class RingingService : Service() {
             // Own scope: the service scope is cancelled as soon as the service stops.
             val settings = app.settings
             CoroutineScope(Dispatchers.IO).launch { settings.markTestAlarmPassed(System.currentTimeMillis()) }
+        } else if (current != null) {
+            endTracking(detail = null)
         }
         finish()
     }
@@ -223,8 +235,17 @@ class RingingService : Service() {
         val current = RingingState.current.value
         if (current != null && current.kind != AlarmScheduler.Kind.TEST && current.snoozeMinutes > 0) {
             app.scheduler.snooze(current.alarmId, current.snoozeMinutes)
+            val context = applicationContext
+            val minutes = current.snoozeMinutes
+            CoroutineScope(Dispatchers.IO).launch { Tracker.onSnoozed(context, minutes) }
         }
         finish()
+    }
+
+    /** The alarm is over: end tonight's tracking, if any. Own scope: the service stops right after. */
+    private fun endTracking(detail: String?) {
+        val context = applicationContext
+        CoroutineScope(Dispatchers.IO).launch { Tracker.onAlarmDismissed(context, detail) }
     }
 
     private fun finish() {

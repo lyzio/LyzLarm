@@ -1,5 +1,6 @@
 package se.lyzio.lyzlarm.alarm
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -31,7 +32,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import se.lyzio.lyzlarm.MainActivity
 import se.lyzio.lyzlarm.R
+import se.lyzio.lyzlarm.tracking.TrackingService
 import se.lyzio.lyzlarm.ui.components.LzIcon
 import se.lyzio.lyzlarm.ui.components.PrimaryButton
 import se.lyzio.lyzlarm.ui.components.SecondaryButton
@@ -70,7 +73,18 @@ class RingingActivity : ComponentActivity() {
                 if (current != null) {
                     RingingScreen(
                         ringing = current,
-                        onDismiss = { RingingService.send(this, RingingService.ACTION_DISMISS) },
+                        onDismiss = {
+                            val tracking = TrackingService.running.value && current.kind != AlarmScheduler.Kind.TEST
+                            RingingService.send(this, RingingService.ACTION_DISMISS)
+                            // Show last night's graph (after unlocking, if the phone is locked).
+                            if (tracking) {
+                                startActivity(
+                                    Intent(this, MainActivity::class.java)
+                                        .setAction(MainActivity.ACTION_OPEN_MORNING)
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                                )
+                            }
+                        },
                         onSnooze = { RingingService.send(this, RingingService.ACTION_SNOOZE) },
                     )
                 }

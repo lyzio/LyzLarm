@@ -15,6 +15,11 @@ import se.lyzio.lyzlarm.R
 /** App colors (Project Facts + UI mockup). */
 object Lz {
     val Base = Color(0xFF1B2F33)
+    /** Bedtime screen and logo background. */
+    val Night = Color(0xFF0F1C1F)
+    val NightCard = Color(0xFF182A2E)
+    /** "Gap" marker. */
+    val Warning = Color(0xFFF2C94C)
     val Surface = Color(0xFF243D42)
     val SurfaceDim = Color(0xFF20363A)
     val Divider = Color(0xFF2C474D)

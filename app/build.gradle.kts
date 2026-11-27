@@ -17,11 +17,19 @@ android {
         applicationId = "se.lyzio.lyzlarm"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
     }
 
     signingConfigs {
+        // Test builds: one fixed, public key (app/debug.keystore) instead of a new random
+        // key per CI run, so a newer debug APK installs over an older one. It never signs releases.
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         if (releaseKeystore != null) {
             create("release") {
                 storeFile = file(releaseKeystore)
@@ -62,6 +70,13 @@ android {
     lint {
         abortOnError = false
     }
+
+    testOptions {
+        unitTests {
+            // Robolectric (database migration test) needs the merged resources.
+            isIncludeAndroidResources = true
+        }
+    }
 }
 
 kotlin {
@@ -94,4 +109,8 @@ dependencies {
     implementation(libs.datastore.preferences)
 
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.test.junit)
+    testImplementation(libs.room.testing)
 }

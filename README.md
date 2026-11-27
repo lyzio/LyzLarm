@@ -4,8 +4,9 @@ A fully offline smart alarm for Android with sleep tracking. LyzLarm wakes you a
 lightest moment of a wake window, based on how you actually slept, and nothing ever
 leaves the phone: the app has no internet permission at all.
 
-**Status: v0.1** — a reliable alarm that rings on time with the screen locked, also after
-a restart. Sleep tracking arrives in v0.2 and the smart wake window in v0.3. See the
+**Status: v0.2** — a reliable alarm plus sleep tracking: tap Start sleep at bedtime, put
+the phone on the mattress, and see a movement graph every morning. The smart wake
+window arrives in v0.3. See the
 [roadmap](https://lyzio.github.io/LyzLarm/#roadmap).
 
 ## Install
@@ -40,7 +41,7 @@ Local build: install JDK 17 and the Android SDK (or Android Studio), then
 
 ```
 app/            UI, alarm scheduling and ringing, database
-sleep-engine/   pure Kotlin: activity scores, sleep curve, wake decision, learning
+sleep-engine/   pure Kotlin: movement scores, gaps, bedtime learning (later: sleep curve, wake decision)
 site/           the website at lyzio.github.io/LyzLarm
 docs/           signing guide, test checklist
 ```

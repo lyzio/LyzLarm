@@ -1,13 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Logo C at small size: no rays, sun radius 13 (in the 120 box). One color. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:pathData="M12,13m-8,0a8,8 0,1 1,16 0a8,8 0,1 1,-16 0M12,9L12,13L14.5,15M5,3L2,6M19,3L22,6" />
+    <group
+        android:scaleX="0.31"
+        android:scaleY="0.31"
+        android:translateX="-5.36"
+        android:translateY="-7.22">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M57.354,28.027 A34,34 0 0,0 29.162,82.874 A34,34 0 0,0 89.261,69.050 A26,26 0 0,1 53.477,63.962 A26,26 0 0,1 57.354,28.027 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M74,48m-13,0a13,13 0,1 1,26 0a13,13 0,1 1,-26 0" />
+    </group>
 </vector>

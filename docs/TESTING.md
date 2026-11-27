@@ -1,8 +1,60 @@
-# v0.1 test checklist (test phone: Fairphone 6, Android 16)
+# v0.2 test checklist (test phone: Fairphone 6, Android 16)
 
 Install the debug APK from the pull request's latest **Build** run (Actions › run ›
 Artifacts › `lyzlarm-debug-…`, unzip, open the `.apk` on the phone). It installs as a
 separate app next to any release build. Tick each box; note anything odd in the PR.
+
+Coming from the v0.1 debug build: **uninstall it first** (it was signed with a one-off
+test key, so Android refuses the update) and set your alarms again. From v0.2 on, test
+builds share one fixed test key, so later builds install over earlier ones.
+
+## Upgrade and logo
+- [ ] Installing a later v0.2 build over an earlier one works and keeps alarms and nights
+- [ ] The launcher icon is the new logo (crescent moon holding a pink sun) on a dark background
+- [ ] With themed icons on (Wallpaper & style › Themed icons), the icon shows moon and sun in one color
+- [ ] Notifications show the moon-and-sun small icon; Welcome (reset app data to see it) and About show the new logo
+
+## Start sleep
+- [ ] Alarms tab: the card reads "Next alarm · in …" and "Fixed time · smart wake arrives in v0.3"
+- [ ] With no alarm in the next 16 h, **Start sleep** is grey with "Set an alarm first"
+- [ ] With an alarm set: the hint reads "Tracks until the HH:MM alarm"; tapping **Start sleep** opens the Bedtime screen
+- [ ] A low "Tracking your sleep · Alarm HH:MM · movement tracking on" notification appears with **Stop tracking**
+- [ ] Bedtime screen: time, alarm, Movement "Active, all night", Alarm "Rings in …", Battery "…%, enough for tonight" (or a warning), greyed Smart wake and Sound rows
+- [ ] After 30 s without touching, the screen dims; a tap brightens it
+- [ ] A short press on **Hold to stop tracking** does nothing; holding ~1.5 s stops tracking. Under 15 min tracked: a message says it was not saved; longer: the night's graph opens
+- [ ] Back from Bedtime returns to the Alarms tab while tracking continues; the big button then reads "Tracking your sleep" and reopens Bedtime
+
+## Short test night (30–60 min, set an alarm 45 min ahead)
+- [ ] Start sleep, put the phone face down on the bed, move it now and then, lock the screen
+- [ ] When the alarm rings, **Snooze** once, then **I'm up**: after unlocking, the Morning screen opens ("Saving last night…" for a moment is OK)
+- [ ] Morning: date range, tiles Tracked / Started / Woke (full text, not cut off), legend on one or two lines, "Battery X% → Y% (Z% used)"; the graph shows bars where you moved, an accent line and dot at the alarm, time labels every 2 h
+- [ ] Event list (newest first): Alarm dismissed, Snoozed 9 min, Alarm rang, Tracking started · battery …%
+- [ ] "How did you wake up?" is greyed with "Arrives in v0.5"
+- [ ] The Alarms tab shows a "Last night" card (tracked time, start – end, gaps) that opens Morning
+- [ ] The tracking notification is gone
+
+## Robustness
+- [ ] Kill the app while tracking (Settings › Apps › LyzLarm › Force stop is too strong; instead swipe it away in Recents): tracking continues or comes back within 15 min
+- [ ] **Restart the phone** while tracking and unlock it: the tracking notification comes back by itself; the night later shows a hatched "Not tracked" area and "Tracking interrupted for N min"
+- [ ] The alarm rings on time in both cases
+
+## Reminders and battery
+- [ ] Settings › Tracking: Bedtime reminder on, "Reminder time: Automatic, around HH:MM" (alarm − 9 h until three nights are tracked)
+- [ ] Set the reminder to a fixed time 2 min ahead: "Time for bed?" arrives with **Start sleep** (opens Bedtime and starts tracking) and **Not tonight** (closes it)
+- [ ] Set the warning threshold above your battery level and the warning time 2 min ahead, unplugged: "Battery at …%" arrives with **OK**. Plugged in: no warning
+- [ ] Turning the reminder or warning off stops it
+
+## Past nights and export
+- [ ] Sleep tab: nights newest first, date range, start – end, yellow **Gap** marker where there were gaps, tracked time
+- [ ] Tap opens the graph; long press asks to delete, and Delete removes it
+- [ ] Morning › **Export this night (CSV)** › **Share…** opens the share sheet; **Save to file…** saves a .csv you can open
+- [ ] With **Record raw sensor data** on (Settings › Tracking) for a night, the export has `raw` rows; without it only `epoch` and `event` rows
+
+## Overnight (5–7 nights)
+For each night note in the PR: battery at start and end (shown in the export header), any gaps, anything odd.
+Send two or three night CSVs, at least one with raw sensor data on.
+
+# Regression: v0.1 alarm checks
 
 ## Setup
 - [ ] First launch shows Welcome (step 1 of 5)
@@ -38,7 +90,7 @@ separate app next to any release build. Tick each box; note anything odd in the 
 ## Settings
 - [ ] System check shows OK for each item, or **Fix** opens the right system page
 - [ ] **Run test** in System check works like the setup test and updates "Last passed"
-- [ ] About shows version 0.1.0-debug, links open the browser, Open-source licenses lists the fonts
+- [ ] About shows version 0.2.0-debug, links open the browser, Open-source licenses lists the fonts
 
 ## Privacy
 - [ ] Android Settings › Apps › LyzLarm › Permissions shows no network access (the build also checks this)

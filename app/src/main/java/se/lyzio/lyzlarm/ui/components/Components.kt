@@ -240,6 +240,21 @@ fun StepHeader(step: Int, total: Int) {
     Text("Step $step of $total", color = Lz.TextMuted, fontSize = 13.sp, fontWeight = FontWeight.Medium)
 }
 
+/** Logo C on its dark background (welcome and About screens). */
+@Composable
+fun LogoBadge() {
+    Box(
+        Modifier.size(72.dp).clip(RoundedCornerShape(22.dp)).background(Lz.Night),
+        contentAlignment = Alignment.Center,
+    ) {
+        androidx.compose.foundation.Image(
+            painterResource(se.lyzio.lyzlarm.R.drawable.logo_mark),
+            contentDescription = "LyzLarm logo",
+            modifier = Modifier.size(68.dp),
+        )
+    }
+}
+
 /** Round icon badge used at the top of setup screens. */
 @Composable
 fun IconBadge(@DrawableRes id: Int, background: Color = Lz.Highlight, tint: Color = Color.White) {

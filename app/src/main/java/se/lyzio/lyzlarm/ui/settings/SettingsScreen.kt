@@ -40,9 +40,9 @@ import se.lyzio.lyzlarm.ui.theme.SpaceGrotesk
 import java.text.DateFormat
 import java.util.Date
 
-/** v0.1 settings: System check and About. Other groups arrive with their features. */
+/** Settings: System check, Tracking (v0.2) and About. Other groups arrive with their features. */
 @Composable
-fun SettingsScreen(onOpenAbout: () -> Unit, onRunTest: () -> Unit) {
+fun SettingsScreen(onOpenAbout: () -> Unit, onRunTest: () -> Unit, onOpenTracking: () -> Unit) {
     val context = LocalContext.current
     val status = rememberSystemStatus()
     val testPassedAt by context.app.settings.testAlarmPassedAt.collectAsState(initial = 0L)
@@ -99,6 +99,14 @@ fun SettingsScreen(onOpenAbout: () -> Unit, onRunTest: () -> Unit) {
         }
 
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Lz.Surface)) {
+            SettingsRow(
+                icon = R.drawable.ic_moon,
+                title = "Tracking",
+                subtitle = "Bedtime reminder, battery warning, raw data",
+                action = null,
+                divider = true,
+                onClick = onOpenTracking,
+            )
             SettingsRow(
                 icon = R.drawable.ic_info,
                 title = "About",
